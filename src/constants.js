@@ -29,7 +29,9 @@ export const DIS_DOMAIN = Object.freeze({
   5: 'Space',
 });
 
-// MIL-STD-2525D Standard Identity codes (characters 3–4 of the 20-char SIDC)
+// ── MIL-STD-2525D (20-char) constants ────────────────────────────────────────
+
+// Standard Identity codes (chars 3–4 of the 20-char SIDC)
 export const SIDC_STANDARD_IDENTITY = Object.freeze({
   '00': 'Pending',
   '01': 'Unknown',
@@ -40,7 +42,7 @@ export const SIDC_STANDARD_IDENTITY = Object.freeze({
   '06': 'Hostile',
 });
 
-// MIL-STD-2525D Symbol Sets (characters 5–6 of the 20-char SIDC)
+// Symbol Sets (chars 5–6 of the 20-char SIDC)
 export const SIDC_SYMBOL_SET = Object.freeze({
   '01': 'Air',
   '02': 'AirMissile',
@@ -60,11 +62,10 @@ export const SIDC_SYMBOL_SET = Object.freeze({
   '40': 'MineWarfare',
 });
 
-// DIS Force ID → MIL-STD-2525D Standard Identity (2-char string)
-// Index 0=Other/Unknown, 1=Friendly, 2=Opposing/Hostile, 3=Neutral
+// DIS Force ID → 2525D Standard Identity (2-char string)
 export const FORCE_ID_TO_SI = Object.freeze(['01', '03', '06', '04']);
 
-// MIL-STD-2525D Standard Identity → DIS Force ID
+// 2525D Standard Identity → DIS Force ID
 export const SI_TO_FORCE_ID = Object.freeze({
   '00': 0, // Pending → Other
   '01': 0, // Unknown → Other
@@ -73,4 +74,40 @@ export const SI_TO_FORCE_ID = Object.freeze({
   '04': 3, // Neutral → Neutral
   '05': 2, // Suspect → Opposing
   '06': 2, // Hostile → Opposing
+});
+
+// ── MIL-STD-2525C (15-char) constants ────────────────────────────────────────
+
+// DIS Force ID → 2525C Standard Identity character (position 2 of SIDC)
+export const FORCE_ID_TO_SI_CHAR = Object.freeze(['U', 'F', 'H', 'N']);
+
+// 2525C Standard Identity character → DIS Force ID
+export const SI_CHAR_TO_FORCE_ID = Object.freeze({
+  F: 1, // Friend
+  G: 1, // Exercise Friend
+  D: 1, // Exercise Friend Pending
+  M: 1, // Exercise Assumed Friend
+  A: 1, // Assumed Friend
+  H: 2, // Hostile
+  J: 2, // Joker (suspected hostile)
+  K: 2, // Faker (friendly acting hostile)
+  S: 2, // Suspect
+  N: 3, // Neutral
+  L: 3, // Exercise Neutral
+  U: 0, // Unknown
+  W: 0, // Exercise Unknown
+  P: 0, // Pending
+});
+
+// 2525C Battle Dimension character (position 3) → DIS { kind, domain }
+// Returns the most common DIS mapping; reverse is approximate.
+export const BD_CHAR_TO_KIND_DOMAIN = Object.freeze({
+  A: { kind: 1, domain: 2 }, // Air Platform
+  G: { kind: 1, domain: 1 }, // Ground Platform / Land
+  S: { kind: 1, domain: 3 }, // Sea Surface Platform
+  U: { kind: 1, domain: 4 }, // Subsurface Platform
+  P: { kind: 1, domain: 5 }, // Space Platform
+  F: { kind: 3, domain: 1 }, // SOF → Life Form / Land
+  X: { kind: 1, domain: 1 }, // Other → fallback to Land Platform
+  Z: { kind: 1, domain: 1 }, // Unknown → fallback to Land Platform
 });

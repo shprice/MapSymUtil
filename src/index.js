@@ -1,6 +1,6 @@
-// mapsyblib — Bidirectional DIS ↔ MIL-STD-2525D SIDC conversion library.
+// mapsyblib — Bidirectional DIS ↔ MIL-STD-2525 SIDC conversion library.
+// Supports MIL-STD-2525D (20-char) and MIL-STD-2525C (15-char) formats.
 // IEEE 1278.1 (DIS) entity type enumerations per SISO-REF-010.
-// MIL-STD-2525D 20-character SIDC format.
 
 export { SIDC_TREE, treeLookup } from './sidc-tree.js';
 
@@ -12,18 +12,26 @@ export {
   SIDC_SYMBOL_SET,
   FORCE_ID_TO_SI,
   SI_TO_FORCE_ID,
+  FORCE_ID_TO_SI_CHAR,
+  SI_CHAR_TO_FORCE_ID,
+  BD_CHAR_TO_KIND_DOMAIN,
 } from './constants.js';
 
 export {
   parseDisEntityType,
   disToSidc,
+  disToSidc2525D,
+  disToSidc2525C,
   disToSidcLabel,
   disToSidcComponents,
   entityToSidc,
 } from './dis-to-sidc.js';
 
 export {
+  detectSidcFormat,
   parseSidc,
+  parseSidc2525D,
+  parseSidc2525C,
   sidcToDis,
   sidcToDisTypeString,
   sidcToForceId,

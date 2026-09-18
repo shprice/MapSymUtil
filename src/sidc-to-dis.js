@@ -1,33 +1,37 @@
-// MIL-STD-2525D SIDC → DIS entity type conversion.
-// Implements the reverse mapping per SISO-REF-010 / MIL-STD-2525D Appendix A.
-//
-// This direction is inherently lossy: many DIS entity types share the same
-// SIDC symbol.  The functions below return the most specific DIS entity type
-// that was used to produce the given SIDC, falling back to domain/kind-level
-// matches when a specific category entry is not found.
+// MIL-STD-2525 SIDC → DIS entity type conversion.
+// Handles both MIL-STD-2525D (20-char) and MIL-STD-2525C (15-char) SIDCs.
+// The reverse direction is inherently approximate: many DIS types share one symbol.
 
-import { SI_TO_FORCE_ID, DIS_ENTITY_KIND, DIS_DOMAIN } from './constants.js';
+import { SI_TO_FORCE_ID, SI_CHAR_TO_FORCE_ID, BD_CHAR_TO_KIND_DOMAIN, DIS_ENTITY_KIND, DIS_DOMAIN } from './constants.js';
 import { REVERSE_INDEX } from './sidc-tree.js';
 
+// ── Format detection ──────────────────────────────────────────────────────────
+
 /**
- * Parse a 20-character MIL-STD-2525D SIDC string into its named fields.
- *
- * @param {string} sidc 20-character SIDC string.
- * @returns {{
- *   version: string,
- *   standardIdentity: string,
- *   symbolSet: string,
- *   status: string,
- *   hqTfDummy: string,
- *   amplifier: string,
- *   entity: string,
- *   entityType: string,
- *   entitySubtype: string,
- * }|null} Parsed fields, or null if the string is not a valid length.
+ * Detect the SIDC format from string length.
+ * @param {string} sidc
+ * @returns {'2525D'|'2525C'|null}
  */
-export function parseSidc(sidc) {
+export function detectSidcFormat(sidc) {
+  if (typeof sidc !== 'string') return null;
+  if (sidc.length === 20) return '2525D';
+  if (sidc.length === 15) return '2525C';
+  return null;
+}
+
+// ── Parsing ───────────────────────────────────────────────────────────────────
+
+/**
+ * Parse a 20-character MIL-STD-2525D SIDC into named fields.
+ *
+ * @param {string} sidc
+ * @returns {{ format:'2525D', version, standardIdentity, symbolSet, status,
+ *             hqTfDummy, amplifier, entity, entityType, entitySubtype }|null}
+ */
+export function parseSidc2525D(sidc) {
   if (typeof sidc !== 'string' || sidc.length !== 20) return null;
   return {
+    format:           '2525D',
     version:          sidc.slice(0, 2),
     standardIdentity: sidc.slice(2, 4),
     symbolSet:        sidc.slice(4, 6),
@@ -41,73 +45,146 @@ export function parseSidc(sidc) {
 }
 
 /**
- * Convert a MIL-STD-2525D SIDC to the best-match DIS entity type fields.
+ * Parse a 15-character MIL-STD-2525C SIDC into named fields.
  *
- * Lookup priority:
- *   1. Exact (symbolSet + entityCode) → specific category match
- *   2. Exact (symbolSet + entityCode) → domain-fallback match (category = -1)
- *   3. Exact (symbolSet + entityCode) → kind-fallback match (domain = -1)
+ * Structure: Scheme(1) + SI(1) + BD(1) + Status(1) + FunctionID(6) + Mod1(1) + Mod2(1) + Country(2) + OOB(1)
  *
- * @param {string} sidc 20-character SIDC string.
- * @returns {{
- *   kind: number,
- *   domain: number,
- *   category: number,
- *   forceId: number,
- *   kindName: string,
- *   domainName: string,
- *   label: string,
- * }|null} Best-match DIS fields, or null if no mapping found.
+ * @param {string} sidc
+ * @returns {{ format:'2525C', codingScheme, standardIdentity, battleDimension, status,
+ *             functionId, modifier1, modifier2, countryCode, orderOfBattle }|null}
  */
-export function sidcToDis(sidc) {
-  const parsed = parseSidc(sidc);
-  if (!parsed) return null;
+export function parseSidc2525C(sidc) {
+  if (typeof sidc !== 'string' || sidc.length !== 15) return null;
+  return {
+    format:           '2525C',
+    codingScheme:     sidc[0],
+    standardIdentity: sidc[1],
+    battleDimension:  sidc[2],
+    status:           sidc[3],
+    functionId:       sidc.slice(4, 10),
+    modifier1:        sidc[10],
+    modifier2:        sidc[11],
+    countryCode:      sidc.slice(12, 14),
+    orderOfBattle:    sidc[14],
+  };
+}
 
-  const { symbolSet, standardIdentity, entity: entityCode } = parsed;
-  const forceId = SI_TO_FORCE_ID[standardIdentity] ?? 0;
+/**
+ * Parse a SIDC string of either supported length.
+ * Returns a format-tagged object, or null for unsupported lengths.
+ *
+ * @param {string} sidc
+ * @returns {ReturnType<parseSidc2525D>|ReturnType<parseSidc2525C>|null}
+ */
+export function parseSidc(sidc) {
+  const fmt = detectSidcFormat(sidc);
+  if (fmt === '2525D') return parseSidc2525D(sidc);
+  if (fmt === '2525C') return parseSidc2525C(sidc);
+  return null;
+}
 
-  const key = `${symbolSet}:${entityCode}`;
-  const candidates = REVERSE_INDEX.get(key);
+// ── Reverse lookup ────────────────────────────────────────────────────────────
+
+function bestCandidate(candidates) {
   if (!candidates || candidates.length === 0) return null;
-
-  // Prefer specific category matches (category >= 0 and domain >= 0)
-  let best =
+  return (
     candidates.find(c => c.category >= 0 && c.domain >= 0) ??
     candidates.find(c => c.domain >= 0) ??
-    candidates[0];
+    candidates[0]
+  );
+}
 
+function buildResult(best, forceId) {
+  if (!best) return null;
   return {
     kind:       best.kind,
     domain:     best.domain >= 0 ? best.domain : 0,
     category:   best.category >= 0 ? best.category : 0,
     forceId,
-    kindName:   DIS_ENTITY_KIND[best.kind] ?? 'Unknown',
+    kindName:   DIS_ENTITY_KIND[best.kind]   ?? 'Unknown',
     domainName: DIS_DOMAIN[best.domain >= 0 ? best.domain : 0] ?? 'Unknown',
     label:      best.label,
+    sisoName:   best.sisoName,
   };
 }
 
 /**
- * Convert a SIDC to a DIS entity type dot-notation string.
- * Country and subcategory fields are set to 0 (unknown).
+ * Convert a SIDC (either format) to the best-match DIS entity type fields.
  *
- * @param {string} sidc 20-character SIDC string.
- * @returns {string|null} Entity type string like "1.2.0.1.0.0.0", or null.
+ * Lookup priority:
+ *   1. Specific category match (category >= 0, domain >= 0)
+ *   2. Domain-fallback match
+ *   3. Kind-fallback match
+ *
+ * @param {string} sidc  15-char (2525C) or 20-char (2525D) SIDC.
+ * @returns {{ kind, domain, category, forceId, kindName, domainName, label, sisoName }|null}
  */
-export function sidcToDisTypeString(sidc) {
-  const result = sidcToDis(sidc);
-  if (!result) return null;
-  return `${result.kind}.${result.domain}.0.${result.category}.0.0.0`;
+export function sidcToDis(sidc) {
+  const fmt = detectSidcFormat(sidc);
+  if (!fmt) return null;
+
+  if (fmt === '2525D') {
+    const parsed = parseSidc2525D(sidc);
+    if (!parsed) return null;
+    const forceId    = SI_TO_FORCE_ID[parsed.standardIdentity] ?? 0;
+    const key        = `${parsed.symbolSet}:${parsed.entity}`;
+    const candidates = REVERSE_INDEX.byD.get(key);
+    return buildResult(bestCandidate(candidates), forceId);
+  }
+
+  // 2525C
+  const parsed  = parseSidc2525C(sidc);
+  if (!parsed) return null;
+  const forceId = SI_CHAR_TO_FORCE_ID[parsed.standardIdentity] ?? 0;
+
+  // Try exact fid match first
+  const fid = parsed.functionId.replace(/-+$/, ''); // trim trailing dashes for lookup
+  const key = `${parsed.battleDimension}:${parsed.functionId}`;
+  const candidates = REVERSE_INDEX.byC.get(key);
+  const specific   = bestCandidate(candidates);
+
+  if (specific) return buildResult(specific, forceId);
+
+  // Fall back to battle-dimension → kind/domain default
+  const kdFallback = BD_CHAR_TO_KIND_DOMAIN[parsed.battleDimension];
+  if (!kdFallback) return null;
+  return {
+    kind:       kdFallback.kind,
+    domain:     kdFallback.domain,
+    category:   0,
+    forceId,
+    kindName:   DIS_ENTITY_KIND[kdFallback.kind]   ?? 'Unknown',
+    domainName: DIS_DOMAIN[kdFallback.domain] ?? 'Unknown',
+    label:      'Unknown',
+    sisoName:   'Unknown',
+  };
 }
 
 /**
- * Extract only the DIS Force ID from a SIDC's Standard Identity field.
+ * Convert a SIDC to a DIS entity type dot-notation string (kind.domain.0.category.0.0.0).
  *
- * @param {string} sidc 20-character SIDC string.
- * @returns {number|null} DIS Force ID 0–3, or null for an invalid SIDC.
+ * @param {string} sidc
+ * @returns {string|null}
+ */
+export function sidcToDisTypeString(sidc) {
+  const r = sidcToDis(sidc);
+  if (!r) return null;
+  return `${r.kind}.${r.domain}.0.${r.category}.0.0.0`;
+}
+
+/**
+ * Extract the DIS Force ID from a SIDC of either format.
+ *
+ * @param {string} sidc
+ * @returns {number|null}
  */
 export function sidcToForceId(sidc) {
-  const parsed = parseSidc(sidc);
-  if (!parsed) return null;
-  return SI_TO_FORCE_ID[parsed.standardIdentity] ?? 0;
+  const fmt = detectSidcFormat(sidc);
+  if (!fmt) return null;
+  if (fmt === '2525D') {
+    const parsed = parseSidc2525D(sidc);
+    return parsed ? (SI_TO_FORCE_ID[parsed.standardIdentity] ?? 0) : null;
+  }
+  const parsed = parseSidc2525C(sidc);
+  return parsed ? (SI_CHAR_TO_FORCE_ID[parsed.standardIdentity] ?? 0) : null;
 }

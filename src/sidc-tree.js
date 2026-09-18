@@ -1,165 +1,169 @@
-// DIS entity type → MIL-STD-2525D SIDC lookup tree (20-character format).
-// Source: SISO-REF-010 mapping tables and milsymbol v3 (2525D) entity codes.
+// DIS entity type → MIL-STD-2525 SIDC lookup tree.
+// Each entry carries codes for BOTH output formats:
+//   ss     / entity  — MIL-STD-2525D 20-char Symbol Set + Entity code
+//   bd     / fid     — MIL-STD-2525C 15-char Battle Dimension + Function ID (6 chars)
+//   label            — human-readable symbol category name
+//   sisoName         — official SISO-REF-010 category name (sourced from siso-std-010.xml)
 //
-// Structure: kind → domain → category → { ss, entity, label }
-//   ss     = Symbol Set (2-digit string)
-//   entity = Entity code (6-digit string, symbol-set specific)
-//   label  = Human-readable symbol category name
+// Structure: kind → domain → category → entry
+// Each level may carry a '_' fallback used when the category key is absent.
+// Country (parts[2]) is intentionally not used — affiliation is expressed via
+// Standard Identity derived from forceId instead.
 //
-// Each level has a '_' fallback when the next key is not found.
-// Country (parts[2] of DIS type) is intentionally skipped — affiliation is
-// expressed via Standard Identity, which is derived from forceId.
-//
-// Symbol set codes:
+// 2525D symbol set codes:
 //   '01'=Air  '02'=AirMissile  '05'=Space  '06'=SpaceMissile
 //   '10'=LandUnit  '15'=LandEquipment  '30'=SeaSurface  '35'=SeaSubsurface
+//
+// 2525C battle dimension codes: A=Air  G=Ground  S=SeaSurface  U=Subsurface  P=Space
+// 2525C function IDs are 6-char codes padded with '-' (per MIL-STD-2525C Appendix B).
 
 export const SIDC_TREE = {
   1: { // Platform
-    _: { ss: '10', entity: '120900', label: 'Combat' },
-    1: { // Land
-      _:  { ss: '10', entity: '120900', label: 'Combat' },
-       0: { ss: '10', entity: '120900', label: 'Combat' },
-       1: { ss: '10', entity: '120500', label: 'Armor' },               // Tank
-       2: { ss: '10', entity: '121100', label: 'Infantry (Mech)' },     // AIFV
-       3: { ss: '10', entity: '121100', label: 'Infantry (Mech)' },     // MICV
-       4: { ss: '10', entity: '121100', label: 'Infantry' },            // Armored car
-       5: { ss: '10', entity: '120900', label: 'Combat' },              // Armored cmd post
-       6: { ss: '10', entity: '121300', label: 'Reconnaissance' },      // Wheeled recon
-       7: { ss: '10', entity: '120900', label: 'Combat' },              // Wheeled cmd post
-       8: { ss: '10', entity: '121100', label: 'Infantry' },            // Wheeled utility (sm)
-       9: { ss: '10', entity: '121100', label: 'Infantry' },            // Wheeled utility (lg)
-      10: { ss: '10', entity: '130800', label: 'Mortar' },
-      11: { ss: '10', entity: '140700', label: 'Engineer' },            // Mine plow
-      12: { ss: '10', entity: '140700', label: 'Engineer' },            // Mine rake
-      13: { ss: '10', entity: '140700', label: 'Engineer' },            // Mine roller
-      14: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      15: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      16: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      17: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      18: { ss: '10', entity: '140700', label: 'Engineer' },
-      19: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      20: { ss: '10', entity: '161100', label: 'Maintenance' },         // Maintenance trailer
-      21: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      22: { ss: '10', entity: '140100', label: 'CBRN' },               // Chemical decon
-      23: { ss: '10', entity: '120900', label: 'Combat' },              // Warning system
-      24: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      25: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      26: { ss: '10', entity: '160600', label: 'Combat Service Support' },
-      28: { ss: '10', entity: '130100', label: 'Air Defence' },         // Air defense / SAM
-      29: { ss: '10', entity: '140200', label: 'Combat Support' },      // C3I system
-      30: { ss: '10', entity: '140200', label: 'Combat Support' },      // Operations facility
-      31: { ss: '10', entity: '140200', label: 'Combat Support' },      // Intelligence facility
-      32: { ss: '10', entity: '140200', label: 'Combat Support' },      // Surveillance facility
-      33: { ss: '10', entity: '140200', label: 'Combat Support' },      // Comms facility
-      34: { ss: '10', entity: '140200', label: 'Combat Support' },      // Command facility
-      35: { ss: '10', entity: '140200', label: 'Combat Support' },      // C4I facility
-      36: { ss: '10', entity: '140200', label: 'Combat Support' },      // Control facility
-      37: { ss: '10', entity: '130300', label: 'Field Artillery' },     // Fire control
-      38: { ss: '10', entity: '130100', label: 'Air Defence' },         // Missile defense
-      39: { ss: '10', entity: '140200', label: 'Combat Support' },      // Field cmd post
-      40: { ss: '10', entity: '121300', label: 'Reconnaissance' },      // Observation post
+    _: { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---', label: 'Combat', sisoName: 'Platform' },
+    1: { // Land — SISO Platform-Land Category (es.type.kind.1.domain.1.cat)
+      _:  { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---',  label: 'Combat',                 sisoName: 'Other' },
+       0: { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---',  label: 'Combat',                 sisoName: 'Other' },
+       1: { ss: '10', entity: '120500', bd: 'G', fid: 'UCAC--',  label: 'Armor',                  sisoName: 'Tank' },
+       2: { ss: '10', entity: '121100', bd: 'G', fid: 'UCIZ--',  label: 'Infantry (Mech)',        sisoName: 'Armored Fighting Vehicle' },
+       3: { ss: '10', entity: '121100', bd: 'G', fid: 'UCIZ--',  label: 'Infantry (Mech)',        sisoName: 'Armored Utility Vehicle' },
+       4: { ss: '10', entity: '121100', bd: 'G', fid: 'UCI---',  label: 'Infantry',              sisoName: 'Self-propelled Artillery' },
+       5: { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---',  label: 'Combat',                 sisoName: 'Towed Artillery' },
+       6: { ss: '10', entity: '121300', bd: 'G', fid: 'UCIS--',  label: 'Reconnaissance',         sisoName: 'Small Wheeled Utility Vehicle' },
+       7: { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---',  label: 'Combat',                 sisoName: 'Large Wheeled Utility Vehicle' },
+       8: { ss: '10', entity: '121100', bd: 'G', fid: 'UCI---',  label: 'Infantry',              sisoName: 'Small Tracked Utility Vehicle' },
+       9: { ss: '10', entity: '121100', bd: 'G', fid: 'UCI---',  label: 'Infantry',              sisoName: 'Large Tracked Utility Vehicle' },
+      10: { ss: '10', entity: '130800', bd: 'G', fid: 'UCFCM-',  label: 'Mortar',                 sisoName: 'Mortar' },
+      11: { ss: '10', entity: '140700', bd: 'G', fid: 'UCDE--',  label: 'Engineer',               sisoName: 'Mine plow' },
+      12: { ss: '10', entity: '140700', bd: 'G', fid: 'UCDE--',  label: 'Engineer',               sisoName: 'Mine rake' },
+      13: { ss: '10', entity: '140700', bd: 'G', fid: 'UCDE--',  label: 'Engineer',               sisoName: 'Mine roller' },
+      14: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Cargo trailer' },
+      15: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Fuel trailer' },
+      16: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Generator trailer' },
+      17: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Water trailer' },
+      18: { ss: '10', entity: '140700', bd: 'G', fid: 'UCDE--',  label: 'Engineer',               sisoName: 'Engineer equipment' },
+      19: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Heavy equipment transport trailer' },
+      20: { ss: '10', entity: '161100', bd: 'G', fid: 'USSX--',  label: 'Maintenance',            sisoName: 'Maintenance equipment trailer' },
+      21: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Limber' },
+      22: { ss: '10', entity: '140100', bd: 'G', fid: 'UCDN--',  label: 'CBRN',                   sisoName: 'Chemical decontamination trailer' },
+      23: { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---',  label: 'Combat',                 sisoName: 'Warning System' },
+      24: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Train - Engine' },
+      25: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Train - Car' },
+      26: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Train - Caboose' },
+      27: { ss: '10', entity: '160600', bd: 'G', fid: 'USS---',  label: 'CSS',                    sisoName: 'Civilian Vehicle' },
+      28: { ss: '10', entity: '130100', bd: 'G', fid: 'UCAA--',  label: 'Air Defence',            sisoName: 'Air Defense / Missile Defense Unit Equipment' },
+      29: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'C3I System' },
+      30: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'Operations Facility' },
+      31: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'Intelligence Facility' },
+      32: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'Surveillance Facility' },
+      33: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'Communications Facility' },
+      34: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'Command Facility' },
+      35: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'C4I Facility' },
+      36: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'Control Facility' },
+      37: { ss: '10', entity: '130300', bd: 'G', fid: 'UCFA--',  label: 'Field Artillery',        sisoName: 'Fire Control Facility' },
+      38: { ss: '10', entity: '130100', bd: 'G', fid: 'UCAA--',  label: 'Air Defence',            sisoName: 'Missile Defense Facility' },
+      39: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',         sisoName: 'Field Command Post' },
+      40: { ss: '10', entity: '121300', bd: 'G', fid: 'UCIS--',  label: 'Reconnaissance',         sisoName: 'Observation Post' },
     },
-    2: { // Air
-      _:  { ss: '01', entity: '110100', label: 'Fixed Wing' },
-       0: { ss: '01', entity: '110100', label: 'Fixed Wing' },
-       1: { ss: '01', entity: '110104', label: 'Fighter' },
-       2: { ss: '01', entity: '110102', label: 'Attack / Strike' },
-       3: { ss: '01', entity: '110103', label: 'Bomber' },
-       4: { ss: '01', entity: '110107', label: 'Cargo / Tanker' },
-       5: { ss: '01', entity: '110110', label: 'Maritime Patrol' },     // ASW / MPA
-       6: { ss: '01', entity: '110108', label: 'Electronic Warfare' },
-       7: { ss: '01', entity: '110111', label: 'Reconnaissance' },
-       8: { ss: '01', entity: '110116', label: 'AEW' },                 // Airborne Early Warning
-      20: { ss: '01', entity: '110200', label: 'Helicopter (Attack)' },
-      21: { ss: '01', entity: '110200', label: 'Helicopter (Utility)' },
-      22: { ss: '01', entity: '110200', label: 'Helicopter (ASW)' },
-      23: { ss: '01', entity: '110200', label: 'Helicopter (Cargo)' },
-      24: { ss: '01', entity: '110200', label: 'Helicopter (Obs)' },
-      25: { ss: '01', entity: '110200', label: 'Helicopter (SOF)' },
-      40: { ss: '01', entity: '110100', label: 'Trainer' },
-      50: { ss: '01', entity: '110300', label: 'UAV' },
+    2: { // Air — SISO Platform-Air Category (es.type.kind.1.domain.2.cat)
+      _:  { ss: '01', entity: '110100', bd: 'A', fid: 'MFF---',  label: 'Fixed Wing',             sisoName: 'Other' },
+       0: { ss: '01', entity: '110100', bd: 'A', fid: 'MFF---',  label: 'Fixed Wing',             sisoName: 'Other' },
+       1: { ss: '01', entity: '110104', bd: 'A', fid: 'MFFF--',  label: 'Fighter',                sisoName: 'Fighter/Air Defense' },
+       2: { ss: '01', entity: '110102', bd: 'A', fid: 'MFFS--',  label: 'Attack / Strike',        sisoName: 'Attack/Strike' },
+       3: { ss: '01', entity: '110103', bd: 'A', fid: 'MFFB--',  label: 'Bomber',                 sisoName: 'Bomber' },
+       4: { ss: '01', entity: '110107', bd: 'A', fid: 'MFFT--',  label: 'Cargo / Tanker',         sisoName: 'Cargo/Tanker' },
+       5: { ss: '01', entity: '110110', bd: 'A', fid: 'MFFM--',  label: 'Maritime Patrol',        sisoName: 'ASW/Patrol/Observation' },
+       6: { ss: '01', entity: '110108', bd: 'A', fid: 'MFFE--',  label: 'Electronic Warfare',     sisoName: 'Electronic Warfare (EW)' },
+       7: { ss: '01', entity: '110111', bd: 'A', fid: 'MFFR--',  label: 'Reconnaissance',         sisoName: 'Reconnaissance' },
+       8: { ss: '01', entity: '110116', bd: 'A', fid: 'MFFA--',  label: 'AEW',                    sisoName: 'Surveillance/C2 (Airborne Early Warning)' },
+      20: { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter (Attack)',    sisoName: 'Attack Helicopter' },
+      21: { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter (Utility)',   sisoName: 'Utility Helicopter' },
+      22: { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter (ASW)',       sisoName: 'Antisubmarine Warfare/Patrol Helicopter' },
+      23: { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter (Cargo)',     sisoName: 'Cargo Helicopter' },
+      24: { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter (Obs)',       sisoName: 'Observation Helicopter' },
+      25: { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter (SOF)',       sisoName: 'Special Operations Helicopter' },
+      40: { ss: '01', entity: '110100', bd: 'A', fid: 'MFF---',  label: 'Trainer',               sisoName: 'Trainer' },
+      50: { ss: '01', entity: '110300', bd: 'A', fid: 'MUAV--',  label: 'UAV',                    sisoName: 'Unmanned' },
     },
-    3: { // Surface
-      _:  { ss: '30', entity: '120203', label: 'Warship' },
-       0: { ss: '30', entity: '120203', label: 'Warship' },
-       1: { ss: '30', entity: '120100', label: 'Carrier' },
-       2: { ss: '30', entity: '120203', label: 'Command Ship' },
-       3: { ss: '30', entity: '120203', label: 'Cruiser' },
-       4: { ss: '30', entity: '120203', label: 'Destroyer' },
-       5: { ss: '30', entity: '120203', label: 'Destroyer' },
-       6: { ss: '30', entity: '120204', label: 'Frigate' },
-       7: { ss: '30', entity: '120500', label: 'Patrol Craft' },
-       8: { ss: '30', entity: '120402', label: 'Minesweeper' },
-       9: { ss: '30', entity: '120203', label: 'Amphibious Ship' },
-      10: { ss: '30', entity: '120203', label: 'Landing Ship' },
-      11: { ss: '30', entity: '120500', label: 'Landing Craft' },
-      14: { ss: '30', entity: '120500', label: 'Patrol Craft' },        // Hydrofoil
-      16: { ss: '30', entity: '120203', label: 'Auxiliary' },
-      17: { ss: '30', entity: '120203', label: 'Auxiliary' },
-      50: { ss: '30', entity: '120204', label: 'Frigate' },
-      51: { ss: '30', entity: '120201', label: 'Battleship' },
-      52: { ss: '30', entity: '120203', label: 'Cruiser' },
-      53: { ss: '30', entity: '120203', label: 'Auxiliary' },
-      54: { ss: '30', entity: '120203', label: 'Amphibious Assault' },
-      55: { ss: '30', entity: '120203', label: 'Amphibious Cargo' },
-      56: { ss: '30', entity: '120203', label: 'Amphibious Transport' },
-      57: { ss: '30', entity: '120203', label: 'Auxiliary' },
-      58: { ss: '30', entity: '120203', label: 'Auxiliary' },
-      59: { ss: '30', entity: '120500', label: 'Surveillance' },
-      60: { ss: '30', entity: '120203', label: 'Auxiliary' },
-      61: { ss: '30', entity: '120203', label: 'Non-Combatant' },
-      62: { ss: '30', entity: '120500', label: 'Coast Guard' },
-      63: { ss: '30', entity: '120500', label: 'Coast Guard' },
+    3: { // Surface — SISO Platform-Surface Category (es.type.kind.1.domain.3.cat)
+      _:  { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Warship',                sisoName: 'Other' },
+       0: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Warship',                sisoName: 'Other' },
+       1: { ss: '30', entity: '120100', bd: 'S', fid: 'CSSC--',  label: 'Carrier',                sisoName: 'Carrier' },
+       2: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSR--',  label: 'Command Ship',           sisoName: 'Command Ship/Cruiser' },
+       3: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSR--',  label: 'Cruiser',                sisoName: 'Guided Missile Cruiser' },
+       4: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSD--',  label: 'Destroyer',              sisoName: 'Guided Missile Destroyer (DDG)' },
+       5: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSD--',  label: 'Destroyer',              sisoName: 'Destroyer (DD)' },
+       6: { ss: '30', entity: '120204', bd: 'S', fid: 'CSSFF-',  label: 'Frigate',                sisoName: 'Guided Missile Frigate (FFG)' },
+       7: { ss: '30', entity: '120500', bd: 'S', fid: 'CSSPB-',  label: 'Patrol Craft',           sisoName: 'Light/Patrol Craft' },
+       8: { ss: '30', entity: '120402', bd: 'S', fid: 'CSMM--',  label: 'Minesweeper',            sisoName: 'Mine Countermeasure Ship/Craft' },
+       9: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Amphibious Ship',        sisoName: 'Dock Landing Ship' },
+      10: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Landing Ship',           sisoName: 'Tank Landing Ship' },
+      11: { ss: '30', entity: '120500', bd: 'S', fid: 'CSSPB-',  label: 'Landing Craft',          sisoName: 'Landing Craft' },
+      14: { ss: '30', entity: '120500', bd: 'S', fid: 'CSSPB-',  label: 'Patrol Craft',           sisoName: 'Hydrofoil' },
+      16: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Auxiliary',              sisoName: 'Auxiliary' },
+      17: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Auxiliary',              sisoName: 'Auxiliary, Merchant Marine' },
+      50: { ss: '30', entity: '120204', bd: 'S', fid: 'CSSFF-',  label: 'Frigate',                sisoName: 'Frigate (including Corvette)' },
+      51: { ss: '30', entity: '120201', bd: 'S', fid: 'CSSB--',  label: 'Battleship',             sisoName: 'Battleship' },
+      52: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSR--',  label: 'Cruiser',                sisoName: 'Heavy Cruiser' },
+      53: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Auxiliary',              sisoName: 'Destroyer Tender' },
+      54: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Amphibious Assault',     sisoName: 'Amphibious Assault Ship' },
+      55: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Amphibious Cargo',       sisoName: 'Amphibious Cargo Ship' },
+      56: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Amphibious Transport',   sisoName: 'Amphibious Transport Dock' },
+      57: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Auxiliary',              sisoName: 'Ammunition Ship' },
+      58: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Auxiliary',              sisoName: 'Combat Stores Ship' },
+      59: { ss: '30', entity: '120500', bd: 'S', fid: 'CSSF--',  label: 'Surveillance',           sisoName: 'Surveillance Towed Array Sonar System' },
+      60: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Auxiliary',              sisoName: 'Fast Combat Support Ship' },
+      61: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Non-Combatant',          sisoName: 'Non-Combatant Ship' },
+      62: { ss: '30', entity: '120500', bd: 'S', fid: 'CSSPB-',  label: 'Coast Guard',            sisoName: 'Coast Guard Cutters' },
+      63: { ss: '30', entity: '120500', bd: 'S', fid: 'CSSPB-',  label: 'Coast Guard',            sisoName: 'Coast Guard Boats' },
     },
     4: { // Subsurface
-      _:  { ss: '35', entity: '110100', label: 'Submarine' },
-       0: { ss: '35', entity: '110100', label: 'Submarine' },
-       1: { ss: '35', entity: '110100', label: 'Submarine (SSBN)' },
-       2: { ss: '35', entity: '110100', label: 'Submarine (SSGN)' },
-       3: { ss: '35', entity: '110100', label: 'Submarine (SSN)' },
-       4: { ss: '35', entity: '110100', label: 'Submarine (SSG)' },
-       5: { ss: '35', entity: '110100', label: 'Submarine (SS)' },
-       6: { ss: '35', entity: '110100', label: 'Submarine (SSAN)' },
-       7: { ss: '35', entity: '110100', label: 'Submarine (SSA)' },
+      _:  { ss: '35', entity: '110100', bd: 'U', fid: 'SSM---',  label: 'Submarine',              sisoName: 'Other' },
+       0: { ss: '35', entity: '110100', bd: 'U', fid: 'SSM---',  label: 'Submarine',              sisoName: 'Other' },
+       1: { ss: '35', entity: '110100', bd: 'U', fid: 'SSMB--',  label: 'Submarine (SSBN)',       sisoName: 'SSBN (Nuclear Ballistic Missile)' },
+       2: { ss: '35', entity: '110100', bd: 'U', fid: 'SSMB--',  label: 'Submarine (SSGN)',       sisoName: 'SSGN (Nuclear Guided Missile)' },
+       3: { ss: '35', entity: '110100', bd: 'U', fid: 'SSM---',  label: 'Submarine (SSN)',        sisoName: 'SSN (Nuclear Attack)' },
+       4: { ss: '35', entity: '110100', bd: 'U', fid: 'SSM---',  label: 'Submarine (SSG)',        sisoName: 'SSG (Guided Missile)' },
+       5: { ss: '35', entity: '110100', bd: 'U', fid: 'SSM---',  label: 'Submarine (SS)',         sisoName: 'SS (Conventional Attack)' },
+       6: { ss: '35', entity: '110100', bd: 'U', fid: 'SSM---',  label: 'Submarine (SSAN)',       sisoName: 'SSAN (Nuclear Auxiliary)' },
+       7: { ss: '35', entity: '110100', bd: 'U', fid: 'SSM---',  label: 'Submarine (SSA)',        sisoName: 'SSA (Auxiliary)' },
     },
     5: { // Space
-      _:  { ss: '05', entity: '110700', label: 'Satellite' },
-       0: { ss: '05', entity: '110700', label: 'Satellite' },
-       1: { ss: '05', entity: '110500', label: 'Space Vehicle' },
-       2: { ss: '05', entity: '110700', label: 'Satellite' },
-       3: { ss: '05', entity: '110700', label: 'Space Launch' },
+      _:  { ss: '05', entity: '110700', bd: 'P', fid: 'MSSS--',  label: 'Satellite',              sisoName: 'Other' },
+       0: { ss: '05', entity: '110700', bd: 'P', fid: 'MSSS--',  label: 'Satellite',              sisoName: 'Other' },
+       1: { ss: '05', entity: '110500', bd: 'P', fid: 'MSS---',  label: 'Space Vehicle',          sisoName: 'Space Vehicle' },
+       2: { ss: '05', entity: '110700', bd: 'P', fid: 'MSSS--',  label: 'Satellite',              sisoName: 'Satellite' },
+       3: { ss: '05', entity: '110700', bd: 'P', fid: 'MSSS--',  label: 'Space Launch',           sisoName: 'Space Launch Vehicle' },
     },
   },
   2: { // Munition
-    _:  { ss: '02', entity: '110000', label: 'Munition' },
-    1: { _: { ss: '15', entity: '110000', label: 'Munition (Land)' } },   // Land Missile (ss 15)
-    2: { _: { ss: '02', entity: '110000', label: 'Munition (Air)' } },    // Air Missile (ss 02)
-    3: { _: { ss: '30', entity: '110000', label: 'Munition (Sea)' } },    // Sea Surface
-    4: { _: { ss: '35', entity: '110000', label: 'Munition (Sub)' } },    // Sea Subsurface
-    5: { _: { ss: '06', entity: '110000', label: 'Munition (Space)' } },  // Space Missile (ss 06)
+    _:  { ss: '02', entity: '110000', bd: 'A', fid: 'WMA---',  label: 'Munition',               sisoName: 'Munition' },
+    1: { _: { ss: '15', entity: '110000', bd: 'G', fid: 'WWE---',  label: 'Munition (Land)',    sisoName: 'Land Munition' } },
+    2: { _: { ss: '02', entity: '110000', bd: 'A', fid: 'WMA---',  label: 'Munition (Air)',     sisoName: 'Air Munition' } },
+    3: { _: { ss: '30', entity: '110000', bd: 'S', fid: 'WMS---',  label: 'Munition (Sea)',     sisoName: 'Sea Surface Munition' } },
+    4: { _: { ss: '35', entity: '110000', bd: 'U', fid: 'WMU---',  label: 'Munition (Sub)',     sisoName: 'Subsurface Munition' } },
+    5: { _: { ss: '06', entity: '110000', bd: 'P', fid: 'WMP---',  label: 'Munition (Space)',   sisoName: 'Space Munition' } },
   },
   3: { // Life Form
-    _:  { ss: '10', entity: '121100', label: 'Infantry' },
+    _:  { ss: '10', entity: '121100', bd: 'G', fid: 'UCI---',  label: 'Infantry',               sisoName: 'Life Form' },
     1: { // Land
-      _:  { ss: '10', entity: '121100', label: 'Infantry' },
-       0: { ss: '10', entity: '120900', label: 'Combat' },
-       1: { ss: '10', entity: '121100', label: 'Infantry' },
-       2: { ss: '10', entity: '121100', label: 'Infantry' },
+      _:  { ss: '10', entity: '121100', bd: 'G', fid: 'UCI---',  label: 'Infantry',             sisoName: 'Other' },
+       0: { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---',  label: 'Combat',               sisoName: 'Other' },
+       1: { ss: '10', entity: '121100', bd: 'G', fid: 'UCI---',  label: 'Infantry',             sisoName: 'Dismounted' },
+       2: { ss: '10', entity: '121100', bd: 'G', fid: 'UCI---',  label: 'Infantry',             sisoName: 'Epaulet' },
     },
     2: { // Air
-      _:  { ss: '01', entity: '110200', label: 'Helicopter' },
-       1: { ss: '01', entity: '110200', label: 'Helicopter' },          // Parachutist
+      _:  { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter',           sisoName: 'Other' },
+       1: { ss: '01', entity: '110200', bd: 'A', fid: 'MFH---',  label: 'Helicopter',           sisoName: 'Parachutist' },
     },
-    3: { _: { ss: '30', entity: '120203', label: 'Warship' } },
+    3: { _: { ss: '30', entity: '120203', bd: 'S', fid: 'CSSF--',  label: 'Warship',            sisoName: 'Other' } },
   },
-  4: { _: { ss: '10', entity: '120900', label: 'Combat' } },           // Environmental
-  8: { _: { ss: '01', entity: '110100', label: 'Fixed Wing' } },       // Expendable
-  9: { _: { ss: '10', entity: '140200', label: 'Combat Support' } },   // Sensor / emitter
+  4: { _: { ss: '10', entity: '120900', bd: 'G', fid: 'UCC---',  label: 'Combat',               sisoName: 'Environmental' } },
+  8: { _: { ss: '01', entity: '110100', bd: 'A', fid: 'MFF---',  label: 'Fixed Wing',           sisoName: 'Expendable' } },
+  9: { _: { ss: '10', entity: '140200', bd: 'G', fid: 'UCCS--',  label: 'Combat Support',       sisoName: 'Sensor/Emitter' } },
 };
 
 // Resolve an entry from the tree with cascading fallbacks.
-// Returns { ss, entity, label } or null.
+// Returns { ss, entity, bd, fid, label, sisoName } or null.
 export function treeLookup(kind, domain, category) {
   const kindNode = SIDC_TREE[kind];
   if (!kindNode) return null;
@@ -168,37 +172,40 @@ export function treeLookup(kind, domain, category) {
   return domainNode[category] ?? domainNode._ ?? kindNode._ ?? null;
 }
 
-// Build the reverse index: "ss:entity" → [{ kind, domain, category, label }, ...]
-// Built once at module load; first match wins in sidcToDisEntity.
+// Build the reverse index: "ss:entity" → [{ kind, domain, category, label, sisoName }, ...]
+// Also indexes "bd:fid" for 2525C reverse lookups.
 function buildReverseIndex() {
-  const index = new Map();
+  const byD   = new Map(); // key="ss:entity" → 2525D entries
+  const byC   = new Map(); // key="bd:fid"    → 2525C entries
 
-  function addEntry(kind, domain, category, entry) {
-    const key = `${entry.ss}:${entry.entity}`;
-    if (!index.has(key)) index.set(key, []);
-    index.get(key).push({ kind, domain, category, label: entry.label });
+  function add(kind, domain, category, entry) {
+    const dKey = `${entry.ss}:${entry.entity}`;
+    const cKey = `${entry.bd}:${entry.fid}`;
+    const rec  = { kind, domain, category, label: entry.label, sisoName: entry.sisoName };
+
+    if (!byD.has(dKey)) byD.set(dKey, []);
+    byD.get(dKey).push(rec);
+
+    if (!byC.has(cKey)) byC.set(cKey, []);
+    byC.get(cKey).push(rec);
   }
 
   for (const [kindStr, kindNode] of Object.entries(SIDC_TREE)) {
     const kind = Number(kindStr);
     for (const [domainStr, domainNode] of Object.entries(kindNode)) {
       if (domainStr === '_') {
-        // kind-level fallback: mark with domain=-1 (wildcard)
-        addEntry(kind, -1, -1, domainNode);
+        add(kind, -1, -1, kindNode._);
         continue;
       }
       const domain = Number(domainStr);
       for (const [catStr, entry] of Object.entries(domainNode)) {
-        if (catStr === '_') {
-          addEntry(kind, domain, -1, entry);
-        } else {
-          addEntry(kind, domain, Number(catStr), entry);
-        }
+        const category = catStr === '_' ? -1 : Number(catStr);
+        add(kind, domain, category, entry);
       }
     }
   }
 
-  return index;
+  return { byD, byC };
 }
 
 export const REVERSE_INDEX = buildReverseIndex();

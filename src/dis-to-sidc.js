@@ -1,19 +1,20 @@
-// DIS entity type → MIL-STD-2525D SIDC conversion.
-// Implements the mapping defined in SISO-REF-010 (Entity Type to Symbol mapping).
+// DIS entity type → MIL-STD-2525 SIDC conversion.
+// Supports both MIL-STD-2525D (20-char) and MIL-STD-2525C (15-char) output.
+// Mapping derived from SISO-REF-010 entity type enumerations.
 
-import { FORCE_ID_TO_SI } from './constants.js';
+import { FORCE_ID_TO_SI, FORCE_ID_TO_SI_CHAR } from './constants.js';
 import { treeLookup } from './sidc-tree.js';
 
 /**
- * Parse a DIS entity type string or object into its component fields.
+ * Parse a DIS entity type string or object into its 7 component fields.
  *
- * Accepts either:
- *   - A dot/dash-separated string: "1.1.0.1.0.0.0"  (kind.domain.country.category.subcategory.specific.extra)
- *   - An object: { kind, domain, category }
+ * Accepts:
+ *   - Dot/dash-separated string: "1.1.225.1.1.1.0"
+ *     (kind.domain.country.category.subcategory.specific.extra)
+ *   - Object: { kind, domain, country, category, subcategory, specific, extra }
  *
- * @param {string|{kind:number,domain:number,category:number}} entityType
- * @returns {{ kind:number, domain:number, country:number, category:number,
- *             subcategory:number, specific:number, extra:number }}
+ * @param {string|object} entityType
+ * @returns {{ kind, domain, country, category, subcategory, specific, extra }}
  */
 export function parseDisEntityType(entityType) {
   if (typeof entityType === 'string') {
@@ -40,29 +41,58 @@ export function parseDisEntityType(entityType) {
 }
 
 /**
- * Convert a DIS entity type to a MIL-STD-2525D 20-character SIDC string.
+ * Convert a DIS entity type to a SIDC string.
  *
- * @param {string|{kind:number,domain:number,category:number}} entityType
- *   DIS entity type as a dot-separated string or component object.
- * @param {number} [forceId=0]
- *   DIS Force ID: 0=Other/Unknown, 1=Friendly, 2=Opposing, 3=Neutral.
- * @returns {string|null} 20-character SIDC string, or null if no mapping found.
+ * @param {string|object} entityType  DIS entity type (string or object).
+ * @param {number} [forceId=0]        DIS Force ID: 0=Other/Unknown, 1=Friendly, 2=Opposing, 3=Neutral.
+ * @param {'2525D'|'2525C'} [format='2525D']  Output SIDC format.
+ * @returns {string|null} SIDC string (20-char for 2525D, 15-char for 2525C), or null if no mapping.
  */
-export function disToSidc(entityType, forceId = 0) {
+export function disToSidc(entityType, forceId = 0, format = '2525D') {
+  return format === '2525C'
+    ? disToSidc2525C(entityType, forceId)
+    : disToSidc2525D(entityType, forceId);
+}
+
+/**
+ * Generate a MIL-STD-2525D 20-character SIDC.
+ *
+ * Format: Version(2) + SI(2) + SymSet(2) + Status(1) + HQ(1) + Amp(2) + Entity(6) + Type(2) + Subtype(2)
+ *
+ * @param {string|object} entityType
+ * @param {number} [forceId=0]
+ * @returns {string|null}
+ */
+export function disToSidc2525D(entityType, forceId = 0) {
   const { kind, domain, category } = parseDisEntityType(entityType);
   const entry = treeLookup(kind, domain, category);
   if (!entry) return null;
-
   const si = FORCE_ID_TO_SI[forceId] ?? '01';
-  // 20-char 2525D: Version(10) + SI(2) + SymSet(2) + Status(0) + HQ(0) + Amp(00) + Entity(6) + Type(00) + Subtype(00)
   return `10${si}${entry.ss}0000${entry.entity}0000`;
 }
 
 /**
- * Look up the human-readable SIDC label for a DIS entity type without
- * constructing the full SIDC string.
+ * Generate a MIL-STD-2525C 15-character SIDC.
  *
- * @param {string|{kind:number,domain:number,category:number}} entityType
+ * Format: Scheme(1) + SI(1) + BD(1) + Status(1) + FunctionID(6) + Mod1(1) + Mod2(1) + Country(2) + OOB(1)
+ *
+ * @param {string|object} entityType
+ * @param {number} [forceId=0]
+ * @returns {string|null}
+ */
+export function disToSidc2525C(entityType, forceId = 0) {
+  const { kind, domain, category } = parseDisEntityType(entityType);
+  const entry = treeLookup(kind, domain, category);
+  if (!entry) return null;
+  const si  = FORCE_ID_TO_SI_CHAR[forceId] ?? 'U';
+  // S=Warfighting, Present (P), 5 trailing dashes (mod1+mod2+country+OOB)
+  return `S${si}${entry.bd}P${entry.fid}-----`;
+}
+
+/**
+ * Look up the human-readable label for a DIS entity type.
+ *
+ * @param {string|object} entityType
  * @returns {string|null}
  */
 export function disToSidcLabel(entityType) {
@@ -71,33 +101,39 @@ export function disToSidcLabel(entityType) {
 }
 
 /**
- * Convert a DIS entity represented as a full object (as decoded from a PDU)
- * into a 20-character SIDC string.
+ * Return the full mapping components for a DIS entity type without building the SIDC string.
  *
- * Expects the entity to have:
- *   - type: dot-separated entity type string (e.g. "1.1.0.1.0.0.0"), OR
- *           individual fields kind/domain/category
- *   - forceId: 0–3
- *
- * @param {{ type?:string, kind?:number, domain?:number, category?:number,
- *           forceId?:number }} entity
- * @returns {string|null}
- */
-export function entityToSidc(entity) {
-  const typeStr = entity.type ?? `${entity.kind ?? 0}.${entity.domain ?? 0}.0.${entity.category ?? 0}.0.0.0`;
-  return disToSidc(typeStr, entity.forceId ?? 0);
-}
-
-/**
- * Return the symbol set code and entity code that the DIS type maps to,
- * without constructing the full SIDC string.
- *
- * @param {string|{kind:number,domain:number,category:number}} entityType
- * @returns {{ symbolSet:string, entityCode:string, label:string }|null}
+ * @param {string|object} entityType
+ * @returns {{ symbolSet, entityCode, battleDimension, functionId, label, sisoName }|null}
  */
 export function disToSidcComponents(entityType) {
   const { kind, domain, category } = parseDisEntityType(entityType);
   const entry = treeLookup(kind, domain, category);
   if (!entry) return null;
-  return { symbolSet: entry.ss, entityCode: entry.entity, label: entry.label };
+  return {
+    symbolSet:       entry.ss,
+    entityCode:      entry.entity,
+    battleDimension: entry.bd,
+    functionId:      entry.fid,
+    label:           entry.label,
+    sisoName:        entry.sisoName,
+  };
+}
+
+/**
+ * Convert a DIS entity object (as decoded from a PDU) to a SIDC string.
+ *
+ * Accepts an entity with either:
+ *   - `type`: dot-separated type string, or
+ *   - individual `kind`/`domain`/`category` fields
+ * Plus `forceId`.
+ *
+ * @param {{ type?:string, kind?:number, domain?:number, category?:number, forceId?:number }} entity
+ * @param {'2525D'|'2525C'} [format='2525D']
+ * @returns {string|null}
+ */
+export function entityToSidc(entity, format = '2525D') {
+  const typeStr = entity.type
+    ?? `${entity.kind ?? 0}.${entity.domain ?? 0}.0.${entity.category ?? 0}.0.0.0`;
+  return disToSidc(typeStr, entity.forceId ?? 0, format);
 }
