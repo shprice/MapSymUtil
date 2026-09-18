@@ -49,7 +49,7 @@ describe('disToSidc2525D', () => {
   });
 
   it('friendly land tank', () => {
-    assert.equal(disToSidc2525D('1.1.0.1.0.0.0', 1), '10031000001205000000');
+    assert.equal(disToSidc2525D('1.1.0.1.0.0.0', 1), '10031500001202000000');
   });
 
   it('hostile air fighter', () => {
@@ -108,14 +108,14 @@ describe('disToSidc2525C', () => {
     assert.equal(sidc?.[1], 'F');   // Friend
     assert.equal(sidc?.[2], 'G');   // Ground
     assert.equal(sidc?.[3], 'P');   // Present
-    assert.equal(sidc?.slice(4, 10), 'UCAC--'); // Armor FID
+    assert.equal(sidc?.slice(4, 10), 'EVAT--'); // Tank equipment FID
   });
 
   it('hostile air fighter → SHA prefix', () => {
     const sidc = disToSidc2525C('1.2.0.1.0.0.0', 2);
     assert.equal(sidc?.[1], 'H');   // Hostile
     assert.equal(sidc?.[2], 'A');   // Air
-    assert.equal(sidc?.slice(4, 10), 'MFFF--'); // Fighter FID
+    assert.equal(sidc?.slice(4, 10), 'MFF---'); // Fighter FID
   });
 
   it('neutral surface carrier → SSS prefix', () => {
@@ -267,11 +267,11 @@ describe('sidcToDis 2525D', () => {
   });
 
   it('AssumedFriend SI=02 → forceId 1', () => {
-    assert.equal(sidcToDis('10021000001205000000')?.forceId, 1);
+    assert.equal(sidcToDis('10021500001202000000')?.forceId, 1);
   });
 
   it('Suspect SI=05 → forceId 2', () => {
-    assert.equal(sidcToDis('10051000001205000000')?.forceId, 2);
+    assert.equal(sidcToDis('10051500001202000000')?.forceId, 2);
   });
 
   it('includes sisoName', () => {

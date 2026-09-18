@@ -388,7 +388,7 @@
 
 <script type="module">
 import {
-  SIDC_TREE, DIS_ENTITY_KIND, DIS_DOMAIN, FORCE_ID_TO_SI, FORCE_ID_TO_SI_CHAR,
+  SIDC_TREE, treeLookup, DIS_ENTITY_KIND, DIS_DOMAIN, FORCE_ID_TO_SI, FORCE_ID_TO_SI_CHAR,
   disToSidc2525D, disToSidc2525C, disToSidcComponents,
   detectSidcFormat, parseSidc, sidcToDis, sidcToForceId,
 } from '/src/index.js';
@@ -828,15 +828,17 @@ sidcIn.addEventListener('input', () => updateSidcPanel(sidcIn.value.trim()));
 
 // ── Gallery ───────────────────────────────────────────────────────────────
 
-// Returns all SIDC_TREE entries for a specific kind+domain, one per category (no dedup).
+// Returns one entry per category — same set as the category dropdown (etCategoriesAllCountries),
+// with SIDC fields from treeLookup (falls back to domain-level '_' entry for unmapped categories).
 function domainSymbols(kind, domain) {
-  const kindNode   = SIDC_TREE[kind];
-  const domainNode = kindNode?.[domain];
-  if (!domainNode) return [];
-  return Object.entries(domainNode)
-    .filter(([k]) => k !== '_')
-    .map(([catStr, entry]) => ({ ...entry, kind, domain, cat: Number(catStr) }))
-    .sort((a, b) => a.cat - b.cat);
+  const cats = etCategoriesAllCountries(kind, domain);
+  if (!cats.length) return [];
+  return cats.map(({ id, label }) => {
+    const entry = treeLookup(kind, domain, id);
+    if (!entry) return null;
+    // Prefer the SISO label from dis-enums.json; fall back to the tree label.
+    return { ...entry, kind, domain, cat: id, label: label || entry.label };
+  }).filter(Boolean);
 }
 
 function refreshGalleryDomains(kind) {
