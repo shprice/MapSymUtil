@@ -359,6 +359,28 @@ function etOptions(kind, domain, country, category, subcategory) {
   return results.sort((a, b) => a.id - b.id);
 }
 
+// All category IDs (and best label) for a kind+domain across ALL countries.
+// Category is a type classification that spans countries; country only narrows
+// subcategory/specific (which specific vessel class, etc.).
+function etCategoriesAllCountries(kind, domain) {
+  if (!enums) return [];
+  const prefix = `${kind}.${domain}.`;
+  const catMap  = new Map(); // id → label (first country wins; country=0 preferred)
+  const zeroMap = new Map(); // labels specifically from country=0
+  for (const [k, v] of Object.entries(enums.et)) {
+    if (!k.startsWith(prefix)) continue;
+    const parts = k.split('.');
+    if (parts.length !== 4) continue; // only depth-4 keys = category level
+    const country = Number(parts[2]);
+    const catId   = Number(parts[3]);
+    if (country === 0) zeroMap.set(catId, v);
+    if (!catMap.has(catId)) catMap.set(catId, v);
+  }
+  // Prefer country=0 labels when available
+  for (const [id, label] of zeroMap) catMap.set(id, label);
+  return [...catMap.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.id - b.id);
+}
+
 // ── DOM references ────────────────────────────────────────────────────────
 
 const typeStrEl  = document.getElementById('type-str');
@@ -418,26 +440,29 @@ function refreshCountries(kind, domain, selCountry) {
   populateSelect(countrySel, codes.map(c => ({ id: c, label: countryName(c) })), selCountry ?? 0);
 }
 
-// Category options
+// Category options — aggregated across ALL countries so every valid category appears
+// regardless of the country selector (country only narrows subcategory/specific).
 function refreshCategories(kind, domain, country, selCat) {
-  // Start with known SIDC_TREE categories
   const kindNode   = SIDC_TREE[kind];
   const domainNode = kindNode?.[domain];
   const treeCats   = domainNode
     ? Object.keys(domainNode).filter(k => k !== '_').map(Number).sort((a,b)=>a-b)
     : [];
 
-  // Merge with et data
-  const etCats = etOptions(kind, domain, country).map(e => e.id);
-  const allCats = [...new Set([0, ...treeCats, ...etCats])].sort((a,b)=>a-b);
+  // Pull categories from all countries, then merge with SIDC tree
+  const allCountryCats = etCategoriesAllCountries(kind, domain);
+  const allCatIds = [...new Set([0, ...treeCats, ...allCountryCats.map(e => e.id)])].sort((a,b)=>a-b);
+  const etLabelMap = new Map(allCountryCats.map(e => [e.id, e.label]));
 
   const catLabel = (id) => {
-    const sisoLabel = etLabel(`${kind}.${domain}.${country}.${id}`);
+    // Prefer country-specific label for selected country, then cross-country, then SIDC tree
+    const specific  = etLabel(`${kind}.${domain}.${country}.${id}`);
+    const universal = etLabelMap.get(id);
     const treeLabel = domainNode?.[id]?.sisoName;
-    return sisoLabel ?? treeLabel ?? (id === 0 ? 'Other / Any' : `Category ${id}`);
+    return specific ?? universal ?? treeLabel ?? (id === 0 ? 'Other / Any' : `Category ${id}`);
   };
 
-  populateSelect(catSel, allCats.map(id => ({ id, label: catLabel(id) })), selCat ?? 0);
+  populateSelect(catSel, allCatIds.map(id => ({ id, label: catLabel(id) })), selCat ?? 0);
   const note = document.getElementById('cat-note');
   note.textContent = treeCats.length ? `SIDC mapped: ${treeCats.join(', ')}` : 'No SIDC-specific entries; fallback used';
 }
