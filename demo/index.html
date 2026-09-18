@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MapSybLib — DIS ↔ MIL-STD-2525D Visualiser</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #12151d;
+      --panel:     #1a1f2e;
+      --panel2:    #1f2537;
+      --border:    #2a3147;
+      --accent:    #3a7bd5;
+      --text:      #c7d0da;
+      --muted:     #5c6b7a;
+      --label:     #8899b0;
+      --unknown:   #c9a227;
+      --friendly:  #4aa3ff;
+      --hostile:   #ff5b5b;
+      --neutral:   #4cd964;
+      --green:     #3fb950;
+      --radius:    6px;
+      --mono:      ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: var(--text);
+    }
+    header .badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    header .sub {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 1px;
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Panels */
+    .panel {
+      background: var(--panel);
+      padding: 20px 24px;
+    }
+    .panel.full { grid-column: 1 / -1; }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Form controls */
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    label.field-label {
+      font-size: 11px;
+      color: var(--label);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    select, input[type="number"], input[type="text"] {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    select:focus, input:focus {
+      border-color: var(--accent);
+    }
+    input[type="number"] { font-family: var(--mono); }
+
+    /* Known categories datalist hint */
+    .cat-hint {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Result area */
+    .result-area {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      min-height: 120px;
+    }
+    .symbol-box {
+      flex: 0 0 auto;
+      width: 96px;
+      height: 96px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff2;
+      border-radius: var(--radius);
+      position: relative;
+    }
+    .symbol-box img { max-width: 90px; max-height: 90px; }
+    .symbol-box .no-sym {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      padding: 4px;
+    }
+
+    .result-fields { flex: 1; min-width: 0; }
+    .result-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .result-key {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      min-width: 70px;
+      flex-shrink: 0;
+    }
+    .result-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .result-val.big {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.05em;
+    }
+    .result-val.label-text {
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--green);
+    }
+    .result-val.null-val { color: var(--muted); font-style: italic; }
+
+    /* Force colour accents */
+    .force-0 { color: var(--unknown); }
+    .force-1 { color: var(--friendly); }
+    .force-2 { color: var(--hostile); }
+    .force-3 { color: var(--neutral); }
+
+    /* SIDC input panel */
+    .sidc-input-wrap {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      align-items: flex-end;
+    }
+    .sidc-input-wrap .field { flex: 1; }
+    .sidc-input-wrap input[type="text"] {
+      font-family: var(--mono);
+      font-size: 15px;
+      letter-spacing: 0.08em;
+    }
+    .sidc-validity {
+      font-size: 11px;
+      margin-top: 4px;
+      height: 14px;
+    }
+    .valid { color: var(--green); }
+    .invalid { color: var(--hostile); }
+
+    /* Gallery */
+    .gallery-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .gallery-controls .field { min-width: 160px; }
+    .gallery-summary { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+    }
+    .sym-card {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 8px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      text-align: center;
+    }
+    .sym-card:hover {
+      border-color: var(--accent);
+      background: #1e2840;
+    }
+    .sym-card.active {
+      border-color: var(--accent);
+      background: #1e2840;
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .sym-card .sym-img {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sym-card img { max-height: 56px; max-width: 100px; }
+    .sym-card .sym-label {
+      font-size: 10px;
+      color: var(--label);
+      line-height: 1.3;
+    }
+    .sym-card .sym-ss {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+    }
+    .sym-card .sym-code {
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--muted);
+    }
+
+    .no-sym-card {
+      font-size: 10px;
+      color: var(--muted);
+      padding: 8px;
+    }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      main { grid-template-columns: 1fr; }
+      .panel.full { grid-column: 1; }
+    }
+
+    /* Scroll areas for large gallery */
+    .gallery-scroll {
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .gallery-scroll::-webkit-scrollbar { width: 6px; }
+    .gallery-scroll::-webkit-scrollbar-track { background: transparent; }
+    .gallery-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Pill tags */
+    .pill {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--border);
+      color: var(--label);
+    }
+
+    footer {
+      padding: 12px 24px;
+      color: var(--muted);
+      font-size: 11px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>MapSybLib</h1>
+  <span class="badge">Visualiser</span>
+  <span class="sub">IEEE 1278.1 DIS ↔ MIL-STD-2525D SIDC</span>
+</header>
+
+<main>
+  <!-- ── DIS → SIDC ──────────────────────────────────────────── -->
+  <div class="panel" id="panel-dis">
+    <div class="panel-title">DIS → SIDC</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="kind">Entity Kind</label>
+        <select id="kind"></select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="domain">Domain</label>
+        <select id="domain"></select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="category">Category</label>
+        <input type="number" id="category" min="0" max="255" value="1" list="cat-list">
+        <datalist id="cat-list"></datalist>
+        <div class="cat-hint" id="cat-hint"></div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="force">Force ID</label>
+        <select id="force">
+          <option value="0">0 — Other / Unknown</option>
+          <option value="1" selected>1 — Friendly</option>
+          <option value="2">2 — Opposing</option>
+          <option value="3">3 — Neutral</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="result-area" id="dis-result">
+      <div class="symbol-box" id="dis-sym-box">
+        <div class="no-sym">Loading…</div>
+      </div>
+      <div class="result-fields" id="dis-fields"></div>
+    </div>
+  </div>
+
+  <!-- ── SIDC → DIS ──────────────────────────────────────────── -->
+  <div class="panel" id="panel-sidc">
+    <div class="panel-title">SIDC → DIS</div>
+
+    <div class="sidc-input-wrap">
+      <div class="field">
+        <label class="field-label" for="sidc-input">20-Character SIDC</label>
+        <input type="text" id="sidc-input" maxlength="20" spellcheck="false"
+               placeholder="e.g. 10031000001205000000">
+        <div class="sidc-validity" id="sidc-validity"></div>
+      </div>
+    </div>
+
+    <div class="result-area" id="sidc-result">
+      <div class="symbol-box" id="sidc-sym-box">
+        <div class="no-sym">Enter a SIDC above</div>
+      </div>
+      <div class="result-fields" id="sidc-fields"></div>
+    </div>
+  </div>
+
+  <!-- ── Gallery ─────────────────────────────────────────────── -->
+  <div class="panel full" id="panel-gallery">
+    <div class="panel-title">Symbol Gallery — all unique MIL-STD-2525D symbols in the mapping table</div>
+
+    <div class="gallery-controls">
+      <div class="field">
+        <label class="field-label" for="gal-force">Force ID</label>
+        <select id="gal-force">
+          <option value="0">0 — Unknown</option>
+          <option value="1" selected>1 — Friendly</option>
+          <option value="2">2 — Opposing</option>
+          <option value="3">3 — Neutral</option>
+        </select>
+      </div>
+      <div class="gallery-summary" id="gal-summary"></div>
+    </div>
+
+    <div class="gallery-scroll">
+      <div class="gallery-grid" id="gallery-grid"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  milsymbol © Johan Magnusson (MIT) — DIS enumerations per SISO-REF-010 — MIL-STD-2525D symbol sets
+</footer>
+
+<!-- milsymbol UMD global (sets window.ms) -->
+<script src="https://cdn.jsdelivr.net/npm/milsymbol@3.0.4/dist/milsymbol.js"
+        onerror="window.__milsymbolFailed = true"></script>
+
+<script type="module">
+import {
+  SIDC_TREE,
+  DIS_ENTITY_KIND,
+  DIS_DOMAIN,
+  disToSidc,
+  disToSidcLabel,
+  parseSidc,
+  sidcToDis,
+  sidcToForceId,
+  FORCE_ID_TO_SI,
+  SI_TO_FORCE_ID,
+} from '/src/index.js';
+
+// ── Milsymbol helper ─────────────────────────────────────────────────────────
+
+const ms = () => window.ms;
+
+function renderSymbol(sidc, sizePx = 72) {
+  if (!ms() || !sidc) return null;
+  try {
+    const sym = new (ms().Symbol)(sidc, { size: sizePx });
+    const svg = sym.asSVG();
+    const anchor = sym.getAnchor();
+    const sz = sym.getSize();
+    return { svg, width: sz.width, height: sz.height, ax: anchor.x, ay: anchor.y };
+  } catch {
+    return null;
+  }
+}
+
+function symImg(sidc, sizePx = 72) {
+  const r = renderSymbol(sidc, sizePx);
+  if (!r) return null;
+  const img = document.createElement('img');
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(r.svg);
+  img.width = r.width;
+  img.height = r.height;
+  img.title = sidc;
+  return img;
+}
+
+// ── Populate dropdowns ───────────────────────────────────────────────────────
+
+const kindSel   = document.getElementById('kind');
+const domainSel = document.getElementById('domain');
+const catInput  = document.getElementById('category');
+const forceSel  = document.getElementById('force');
+const sidcInput = document.getElementById('sidc-input');
+const galForceSel = document.getElementById('gal-force');
+
+// Kinds present in the tree
+const treeKinds = Object.keys(SIDC_TREE).map(Number).sort((a,b)=>a-b);
+for (const k of treeKinds) {
+  const opt = document.createElement('option');
+  opt.value = k;
+  opt.textContent = `${k} — ${DIS_ENTITY_KIND[k] ?? 'Unknown'}`;
+  if (k === 1) opt.selected = true;
+  kindSel.appendChild(opt);
+}
+
+function populateDomains(kind) {
+  domainSel.innerHTML = '';
+  const kindNode = SIDC_TREE[kind];
+  if (!kindNode) return;
+  const domains = Object.keys(kindNode)
+    .filter(k => k !== '_')
+    .map(Number)
+    .sort((a,b)=>a-b);
+  for (const d of domains) {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = `${d} — ${DIS_DOMAIN[d] ?? 'Unknown'}`;
+    if (d === 1) opt.selected = true;
+    domainSel.appendChild(opt);
+  }
+  if (domains.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = 0;
+    opt.textContent = '0 — (any)';
+    domainSel.appendChild(opt);
+  }
+}
+
+function populateCatHint(kind, domain) {
+  const catList = document.getElementById('cat-list');
+  catList.innerHTML = '';
+  const hint = document.getElementById('cat-hint');
+  const kindNode = SIDC_TREE[kind];
+  if (!kindNode) { hint.textContent = ''; return; }
+  const domainNode = kindNode[domain];
+  if (!domainNode) { hint.textContent = ''; return; }
+  const cats = Object.keys(domainNode)
+    .filter(k => k !== '_')
+    .map(Number)
+    .sort((a,b)=>a-b);
+  for (const c of cats) {
+    const opt = document.createElement('option');
+    opt.value = c;
+    catList.appendChild(opt);
+  }
+  hint.textContent = cats.length
+    ? `Known: ${cats.join(', ')}  (0 = fallback)`
+    : 'No specific categories — use 0';
+}
+
+populateDomains(1);
+populateCatHint(1, 1);
+
+kindSel.addEventListener('change', () => {
+  populateDomains(+kindSel.value);
+  populateCatHint(+kindSel.value, +domainSel.value);
+  updateDisPanel();
+});
+domainSel.addEventListener('change', () => {
+  populateCatHint(+kindSel.value, +domainSel.value);
+  updateDisPanel();
+});
+catInput.addEventListener('input', updateDisPanel);
+forceSel.addEventListener('change', updateDisPanel);
+
+// ── Force colour helper ──────────────────────────────────────────────────────
+
+const FORCE_NAMES = ['Other/Unknown', 'Friendly', 'Opposing', 'Neutral'];
+const FORCE_CLASSES = ['force-0', 'force-1', 'force-2', 'force-3'];
+
+function forceSpan(id) {
+  const s = document.createElement('span');
+  s.className = `result-val ${FORCE_CLASSES[id] ?? 'force-0'}`;
+  s.textContent = `${id} — ${FORCE_NAMES[id] ?? 'Unknown'}`;
+  return s;
+}
+
+// ── DIS → SIDC panel ────────────────────────────────────────────────────────
+
+function updateDisPanel() {
+  const kind     = +kindSel.value;
+  const domain   = +domainSel.value;
+  const category = +catInput.value || 0;
+  const forceId  = +forceSel.value;
+
+  const typeStr = `${kind}.${domain}.0.${category}.0.0.0`;
+  const sidc    = disToSidc(typeStr, forceId);
+  const label   = disToSidcLabel(typeStr);
+
+  const symBox = document.getElementById('dis-sym-box');
+  const fields = document.getElementById('dis-fields');
+
+  // Render symbol
+  symBox.innerHTML = '';
+  if (sidc) {
+    const img = symImg(sidc, 64);
+    if (img) {
+      symBox.appendChild(img);
+    } else if (window.__milsymbolFailed) {
+      symBox.innerHTML = '<div class="no-sym">milsymbol not loaded (offline?)</div>';
+    } else {
+      symBox.innerHTML = '<div class="no-sym">Rendering…</div>';
+    }
+  } else {
+    symBox.innerHTML = '<div class="no-sym">No mapping</div>';
+  }
+
+  // Render fields
+  fields.innerHTML = '';
+
+  const rows = [
+    { key: 'DIS Type', val: typeStr, cls: '' },
+    { key: 'SIDC',     val: sidc ?? 'null (no mapping)', cls: sidc ? 'big' : 'null-val' },
+    { key: 'Label',    val: label ?? '—', cls: 'label-text' },
+  ];
+
+  if (sidc) {
+    const parsed = parseSidc(sidc);
+    rows.push(
+      { key: 'Symbol Set', val: parsed.symbolSet },
+      { key: 'Entity',     val: parsed.entity },
+    );
+  }
+
+  for (const r of rows) {
+    const row = document.createElement('div');
+    row.className = 'result-row';
+    const k = document.createElement('span');
+    k.className = 'result-key';
+    k.textContent = r.key;
+    const v = document.createElement('span');
+    v.className = `result-val ${r.cls ?? ''}`;
+    v.textContent = r.val;
+    row.appendChild(k);
+    row.appendChild(v);
+    fields.appendChild(row);
+  }
+
+  // Force row (coloured)
+  const forceRow = document.createElement('div');
+  forceRow.className = 'result-row';
+  const fk = document.createElement('span');
+  fk.className = 'result-key';
+  fk.textContent = 'Force ID';
+  forceRow.appendChild(fk);
+  forceRow.appendChild(forceSpan(forceId));
+  fields.appendChild(forceRow);
+
+  // Sync SIDC input on right panel
+  if (sidc && document.activeElement !== sidcInput) {
+    sidcInput.value = sidc;
+    updateSidcPanel(sidc);
+  }
+
+  // Update gallery active card
+  if (sidc) updateGalleryActive(sidc);
+}
+
+// ── SIDC → DIS panel ────────────────────────────────────────────────────────
+
+function updateSidcPanel(sidc) {
+  const symBox = document.getElementById('sidc-sym-box');
+  const fields = document.getElementById('sidc-fields');
+  const validity = document.getElementById('sidc-validity');
+
+  if (!sidc || sidc.length !== 20 || !/^\d{20}$/.test(sidc)) {
+    if (sidc.length > 0) {
+      validity.textContent = `${sidc.length}/20 chars`;
+      validity.className = 'sidc-validity invalid';
+    } else {
+      validity.textContent = '';
+    }
+    symBox.innerHTML = '<div class="no-sym">Enter a SIDC above</div>';
+    fields.innerHTML = '';
+    return;
+  }
+
+  validity.textContent = '✓ valid format';
+  validity.className = 'sidc-validity valid';
+
+  // Symbol
+  symBox.innerHTML = '';
+  const img = symImg(sidc, 64);
+  if (img) {
+    symBox.appendChild(img);
+  } else if (window.__milsymbolFailed) {
+    symBox.innerHTML = '<div class="no-sym">milsymbol not loaded (offline?)</div>';
+  } else {
+    symBox.innerHTML = '<div class="no-sym">Cannot render</div>';
+  }
+
+  // Parse + reverse lookup
+  const parsed  = parseSidc(sidc);
+  const result  = sidcToDis(sidc);
+  const forceId = sidcToForceId(sidc);
+
+  fields.innerHTML = '';
+
+  if (parsed) {
+    const add = (key, val, cls='') => {
+      const row = document.createElement('div');
+      row.className = 'result-row';
+      const k = document.createElement('span');
+      k.className = 'result-key'; k.textContent = key;
+      const v = document.createElement('span');
+      v.className = `result-val ${cls}`; v.textContent = val;
+      row.appendChild(k); row.appendChild(v);
+      fields.appendChild(row);
+    };
+
+    if (result) {
+      add('DIS Type', `${result.kind}.${result.domain}.0.${result.category}.0.0.0`);
+      add('Label', result.label, 'label-text');
+      add('Kind', `${result.kind} — ${result.kindName}`);
+      add('Domain', `${result.domain} — ${result.domainName}`);
+      add('Category', String(result.category));
+    } else {
+      add('DIS Mapping', 'No entry found for this SIDC', 'null-val');
+    }
+
+    add('Sym Set', parsed.symbolSet);
+    add('Entity', parsed.entity);
+
+    // Force (coloured)
+    const forceRow = document.createElement('div');
+    forceRow.className = 'result-row';
+    const fk = document.createElement('span');
+    fk.className = 'result-key'; fk.textContent = 'Force ID';
+    forceRow.appendChild(fk);
+    forceRow.appendChild(forceSpan(forceId ?? 0));
+    fields.appendChild(forceRow);
+  }
+}
+
+sidcInput.addEventListener('input', () => {
+  updateSidcPanel(sidcInput.value.trim());
+});
+
+// ── Gallery ──────────────────────────────────────────────────────────────────
+
+// Collect all unique (ss, entity, label) entries from the tree.
+function allUniqueSymbols() {
+  const seen = new Set();
+  const results = [];
+
+  for (const [kindStr, kindNode] of Object.entries(SIDC_TREE)) {
+    const kind = Number(kindStr);
+    for (const [domainStr, domainNode] of Object.entries(kindNode)) {
+      if (domainStr === '_') {
+        const e = kindNode._;
+        const key = `${e.ss}:${e.entity}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({ ss: e.ss, entity: e.entity, label: e.label, kind, domain: -1, category: -1 });
+        }
+        continue;
+      }
+      const domain = Number(domainStr);
+      for (const [catStr, entry] of Object.entries(domainNode)) {
+        const key = `${entry.ss}:${entry.entity}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({ ss: entry.ss, entity: entry.entity, label: entry.label, kind, domain,
+                         category: catStr === '_' ? -1 : Number(catStr) });
+        }
+      }
+    }
+  }
+
+  // Sort by symbol set then entity code for a consistent layout
+  return results.sort((a, b) => a.ss.localeCompare(b.ss) || a.entity.localeCompare(b.entity));
+}
+
+const UNIQUE_SYMS = allUniqueSymbols();
+
+let currentGalleryActive = null;
+
+function buildGallery(forceId) {
+  const grid = document.getElementById('gallery-grid');
+  const summary = document.getElementById('gal-summary');
+  grid.innerHTML = '';
+
+  const si = FORCE_ID_TO_SI[forceId] ?? '01';
+  let rendered = 0;
+
+  for (const sym of UNIQUE_SYMS) {
+    const sidc = `10${si}${sym.ss}0000${sym.entity}0000`;
+    const card = document.createElement('div');
+    card.className = 'sym-card';
+    card.dataset.sidc = sidc;
+    card.dataset.ss = sym.ss;
+    card.dataset.entity = sym.entity;
+
+    const symDiv = document.createElement('div');
+    symDiv.className = 'sym-img';
+
+    const imgEl = symImg(sidc, 44);
+    if (imgEl) {
+      symDiv.appendChild(imgEl);
+      rendered++;
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'no-sym-card';
+      ph.textContent = sym.ss + ':' + sym.entity;
+      symDiv.appendChild(ph);
+    }
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'sym-label';
+    labelEl.textContent = sym.label;
+
+    const ssEl = document.createElement('div');
+    ssEl.className = 'sym-ss';
+    ssEl.textContent = `SS ${sym.ss}`;
+
+    const codeEl = document.createElement('div');
+    codeEl.className = 'sym-code';
+    codeEl.textContent = sym.entity;
+
+    card.appendChild(symDiv);
+    card.appendChild(labelEl);
+    card.appendChild(ssEl);
+    card.appendChild(codeEl);
+
+    card.addEventListener('click', () => {
+      // Fill DIS panel with first matching DIS type for this symbol
+      fillDisFromSymbol(sym, forceId);
+    });
+
+    grid.appendChild(card);
+  }
+
+  summary.textContent = `${UNIQUE_SYMS.length} unique symbols${rendered < UNIQUE_SYMS.length ? ` (${rendered} rendered)` : ''}`;
+  currentGalleryActive = null;
+}
+
+function updateGalleryActive(sidc) {
+  const parsed = parseSidc(sidc);
+  if (!parsed) return;
+  const key = `${parsed.symbolSet}:${parsed.entity}`;
+  document.querySelectorAll('.sym-card').forEach(card => {
+    const cardKey = `${card.dataset.ss}:${card.dataset.entity}`;
+    card.classList.toggle('active', cardKey === key);
+  });
+  // Scroll active card into view
+  const activeCard = document.querySelector('.sym-card.active');
+  activeCard?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function fillDisFromSymbol(sym, forceId) {
+  // Find the first specific entry in the tree for this symbol
+  for (const [kindStr, kindNode] of Object.entries(SIDC_TREE)) {
+    for (const [domainStr, domainNode] of Object.entries(kindNode)) {
+      if (domainStr === '_') continue;
+      for (const [catStr, entry] of Object.entries(domainNode)) {
+        if (entry.ss === sym.ss && entry.entity === sym.entity) {
+          const kind = Number(kindStr);
+          const domain = Number(domainStr);
+          const cat = catStr === '_' ? 0 : Number(catStr);
+
+          // Set controls
+          kindSel.value = kind;
+          populateDomains(kind);
+          domainSel.value = domain;
+          populateCatHint(kind, domain);
+          catInput.value = cat;
+          forceSel.value = forceId;
+          updateDisPanel();
+          return;
+        }
+      }
+    }
+  }
+}
+
+galForceSel.addEventListener('change', () => buildGallery(+galForceSel.value));
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+// Wait for milsymbol CDN to potentially load before first render.
+// If it's already loaded (cached), fire immediately.
+function init() {
+  updateDisPanel();
+  buildGallery(1);
+}
+
+if (window.ms) {
+  init();
+} else {
+  // Poll briefly for the CDN script to load
+  let ticks = 0;
+  const t = setInterval(() => {
+    ticks++;
+    if (window.ms || ticks > 30) {
+      clearInterval(t);
+      init();
+    }
+  }, 100);
+}
+</script>
+</body>
+</html>

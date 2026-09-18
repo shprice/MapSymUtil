@@ -13,7 +13,8 @@
     "src/"
   ],
   "scripts": {
-    "test": "node --test test/index.test.js"
+    "test": "node --test test/index.test.js",
+    "demo": "node demo/server.js"
   },
   "keywords": [
     "DIS",
