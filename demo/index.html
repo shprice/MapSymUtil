@@ -228,8 +228,16 @@
 
 <!-- ── Gallery ─────────────────────────────────────────────────────────── -->
 <div class="panel full" id="panel-gal">
-  <div class="section-title">Symbol Gallery — all unique MIL-STD-2525 symbols in the mapping table</div>
+  <div class="section-title">Symbol Gallery — all categories for the selected domain</div>
   <div class="gal-controls">
+    <div class="field">
+      <label class="field-label" for="gal-kind">Kind</label>
+      <select id="gal-kind"></select>
+    </div>
+    <div class="field">
+      <label class="field-label" for="gal-domain">Domain</label>
+      <select id="gal-domain"></select>
+    </div>
     <div class="field">
       <label class="field-label" for="gal-force">Force ID</label>
       <select id="gal-force">
@@ -603,7 +611,7 @@ typeStrEl.addEventListener('blur',  () => applyTypeStr(typeStrEl.value));
 function onControlChange() { updateDisPanel(); }
 
 kindSel.addEventListener('change', () => {
-  const k = +kindSel.value; const d = +domainSel.value; const c = +countrySel.value;
+  const k = +kindSel.value;
   refreshDomains(k);
   const nd = +domainSel.value;
   refreshCountries(k, nd, 0);
@@ -611,14 +619,16 @@ kindSel.addEventListener('change', () => {
   refreshSubcategories(k, nd, 0, 0, 0);
   refreshSpecifics(k, nd, 0, 0, 0, 0);
   updateDisPanel();
+  syncGallerySelectors();
 });
 domainSel.addEventListener('change', () => {
-  const k = +kindSel.value; const d = +domainSel.value; const c = +countrySel.value;
+  const k = +kindSel.value; const d = +domainSel.value;
   refreshCountries(k, d, 0);
   refreshCategories(k, d, 0, 0);
   refreshSubcategories(k, d, 0, 0, 0);
   refreshSpecifics(k, d, 0, 0, 0, 0);
   updateDisPanel();
+  syncGallerySelectors();
 });
 countrySel.addEventListener('change', () => {
   const k = +kindSel.value; const d = +domainSel.value; const c = +countrySel.value;
@@ -698,109 +708,139 @@ sidcIn.addEventListener('input', () => updateSidcPanel(sidcIn.value.trim()));
 
 // ── Gallery ───────────────────────────────────────────────────────────────
 
-function allUniqueSymbols() {
-  const seen = new Set(), results = [];
-  for (const [kindStr, kindNode] of Object.entries(SIDC_TREE)) {
-    const kind = Number(kindStr);
-    for (const [domainStr, domainNode] of Object.entries(kindNode)) {
-      if (domainStr === '_') {
-        const e = kindNode._; const key = `${e.ss}:${e.entity}`;
-        if (!seen.has(key)) { seen.add(key); results.push({ ...e, kind, domain: -1, cat: -1 }); }
-        continue;
-      }
-      const domain = Number(domainStr);
-      for (const [catStr, entry] of Object.entries(domainNode)) {
-        const key = `${entry.ss}:${entry.entity}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          results.push({ ...entry, kind, domain, cat: catStr === '_' ? -1 : Number(catStr) });
-        }
-      }
-    }
-  }
-  return results.sort((a, b) => a.ss.localeCompare(b.ss) || a.entity.localeCompare(b.entity));
+// Returns all SIDC_TREE entries for a specific kind+domain, one per category (no dedup).
+function domainSymbols(kind, domain) {
+  const kindNode   = SIDC_TREE[kind];
+  const domainNode = kindNode?.[domain];
+  if (!domainNode) return [];
+  return Object.entries(domainNode)
+    .filter(([k]) => k !== '_')
+    .map(([catStr, entry]) => ({ ...entry, kind, domain, cat: Number(catStr) }))
+    .sort((a, b) => a.cat - b.cat);
 }
 
-const UNIQUE_SYMS = allUniqueSymbols();
+function refreshGalleryDomains(kind) {
+  const galDomain = document.getElementById('gal-domain');
+  const kindNode  = SIDC_TREE[kind];
+  const domains   = kindNode
+    ? Object.keys(kindNode).filter(k => k !== '_').map(Number).sort((a,b)=>a-b)
+    : [1];
+  const prev = +galDomain.value || 1;
+  galDomain.innerHTML = '';
+  for (const d of domains) {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = `${d} — ${DIS_DOMAIN[d] ?? 'Unknown'}`;
+    if (d === prev) opt.selected = true;
+    galDomain.appendChild(opt);
+  }
+}
 
-function buildGallery(forceId, fmt) {
+function buildGallery() {
+  const kind    = +document.getElementById('gal-kind').value   || 1;
+  const domain  = +document.getElementById('gal-domain').value || 1;
+  const forceId = +document.getElementById('gal-force').value  || 0;
+  const fmt     = document.getElementById('gal-fmt').value;
+
   const grid    = document.getElementById('gal-grid');
   const summary = document.getElementById('gal-summary');
   grid.innerHTML = '';
   let rendered   = 0;
 
-  const si   = fmt === '2525C' ? FORCE_ID_TO_SI_CHAR[forceId] ?? 'U' : FORCE_ID_TO_SI[forceId] ?? '01';
+  const si     = fmt === '2525C' ? FORCE_ID_TO_SI_CHAR[forceId] ?? 'U' : FORCE_ID_TO_SI[forceId] ?? '01';
   const toSidc = sym => fmt === '2525C'
     ? `S${si}${sym.bd}P${sym.fid}-----`
     : `10${si}${sym.ss}0000${sym.entity}0000`;
 
-  for (const sym of UNIQUE_SYMS) {
+  const syms = domainSymbols(kind, domain);
+
+  for (const sym of syms) {
     const sidc = toSidc(sym);
     const card = document.createElement('div');
     card.className = 'sym-card';
-    card.dataset.sidc = sidc;
-    card.dataset.ss   = sym.ss;
+    card.dataset.sidc   = sidc;
+    card.dataset.ss     = sym.ss;
     card.dataset.entity = sym.entity;
+    card.dataset.cat    = sym.cat;
 
     const symDiv = document.createElement('div'); symDiv.className = 'sym-img';
     const img = symImg(sidc, 38);
     if (img) { symDiv.appendChild(img); rendered++; }
-    else { const ph = document.createElement('div'); ph.className='no-sym'; ph.textContent=`${sym.ss}/${sym.entity}`; symDiv.appendChild(ph); }
+    else {
+      const ph = document.createElement('div');
+      ph.className = 'no-sym';
+      ph.textContent = `cat ${sym.cat}`;
+      symDiv.appendChild(ph);
+    }
 
-    const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = sym.label;
+    const lbl = document.createElement('div'); lbl.className = 'lbl';
+    lbl.textContent = sym.label;
     const sub = document.createElement('div'); sub.className = 'sub';
-    sub.textContent = fmt === '2525C' ? `${sym.bd}:${sym.fid}` : `SS${sym.ss} ${sym.entity}`;
+    sub.textContent = `cat ${sym.cat}  ${fmt === '2525C' ? sym.fid : sym.entity}`;
 
     card.appendChild(symDiv); card.appendChild(lbl); card.appendChild(sub);
-
-    card.addEventListener('click', () => fillDisFromSym(sym, forceId));
+    card.addEventListener('click', () => fillDisFromCat(kind, domain, sym.cat, forceId));
     grid.appendChild(card);
   }
 
-  summary.textContent = `${UNIQUE_SYMS.length} symbols${rendered < UNIQUE_SYMS.length ? ` (${rendered} rendered)` : ''}`;
+  summary.textContent = `${syms.length} categories${rendered < syms.length ? ` (${rendered} rendered)` : ''}`;
 }
 
 function updateGalleryActive(sidc) {
   const parsed = parseSidc(sidc);
   if (!parsed) return;
-  const key = parsed.format === '2525D' ? `${parsed.symbolSet}:${parsed.entity}` : null;
   document.querySelectorAll('.sym-card').forEach(card => {
-    const match = key ? `${card.dataset.ss}:${card.dataset.entity}` === key
-                      : card.dataset.sidc === sidc;
+    let match = false;
+    if (parsed.format === '2525D') {
+      match = card.dataset.ss === parsed.symbolSet && card.dataset.entity === parsed.entity;
+    } else {
+      match = card.dataset.sidc === sidc;
+    }
     card.classList.toggle('active', match);
   });
   document.querySelector('.sym-card.active')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function fillDisFromSym(sym, forceId) {
+function fillDisFromCat(kind, domain, cat, forceId) {
   forceSel.value = forceId;
-  // Find first specific tree entry for this symbol
-  for (const [kindStr, kindNode] of Object.entries(SIDC_TREE)) {
-    for (const [domainStr, domainNode] of Object.entries(kindNode)) {
-      if (domainStr === '_') continue;
-      for (const [catStr, entry] of Object.entries(domainNode)) {
-        if (entry.ss === sym.ss && entry.entity === sym.entity) {
-          const kind = Number(kindStr), domain = Number(domainStr);
-          const cat  = catStr === '_' ? 0 : Number(catStr);
-          kindSel.value = kind;
-          refreshDomains(kind, domain);
-          refreshCountries(kind, domain, 0);
-          refreshCategories(kind, domain, 0, cat);
-          refreshSubcategories(kind, domain, 0, cat, 0);
-          refreshSpecifics(kind, domain, 0, cat, 0, 0);
-          extraIn.value = 0;
-          updateDisPanel();
-          return;
-        }
-      }
-    }
-  }
+  kindSel.value  = kind;
+  refreshDomains(kind, domain);
+  refreshCountries(kind, domain, 0);
+  refreshCategories(kind, domain, 0, cat);
+  refreshSubcategories(kind, domain, 0, cat, 0);
+  refreshSpecifics(kind, domain, 0, cat, 0, 0);
+  extraIn.value = 0;
+  updateDisPanel();
 }
 
-document.getElementById('gal-force').addEventListener('change', e =>
-  buildGallery(+e.target.value, document.getElementById('gal-fmt').value));
-document.getElementById('gal-fmt').addEventListener('change', e =>
-  buildGallery(+document.getElementById('gal-force').value, e.target.value));
+// Populate gallery kind selector
+const galKindSel   = document.getElementById('gal-kind');
+const galDomainSel = document.getElementById('gal-domain');
+treeKinds.forEach(k => {
+  const opt = document.createElement('option');
+  opt.value = k; opt.textContent = `${k} — ${DIS_ENTITY_KIND[k] ?? 'Unknown'}`;
+  if (k === 1) opt.selected = true;
+  galKindSel.appendChild(opt);
+});
+refreshGalleryDomains(1);
+
+galKindSel.addEventListener('change', () => {
+  refreshGalleryDomains(+galKindSel.value);
+  buildGallery();
+});
+galDomainSel.addEventListener('change', buildGallery);
+document.getElementById('gal-force').addEventListener('change', buildGallery);
+document.getElementById('gal-fmt').addEventListener('change',   buildGallery);
+
+// Sync gallery domain selectors when DIS panel kind/domain changes
+function syncGallerySelectors() {
+  const k = +kindSel.value, d = +domainSel.value;
+  if (+galKindSel.value !== k) {
+    galKindSel.value = k;
+    refreshGalleryDomains(k);
+  }
+  if (+galDomainSel.value !== d) galDomainSel.value = d;
+  buildGallery();
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────
 
@@ -815,7 +855,7 @@ async function init() {
   refreshSpecifics(1, 1, 0, 1, 0, 0);
 
   updateDisPanel();
-  buildGallery(1, '2525D');
+  buildGallery();
 }
 
 if (window.ms) {

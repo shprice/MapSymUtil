@@ -122,7 +122,7 @@ describe('disToSidc2525C', () => {
     const sidc = disToSidc2525C('1.3.0.1.0.0.0', 3);
     assert.equal(sidc?.[1], 'N');   // Neutral
     assert.equal(sidc?.[2], 'S');   // Sea Surface
-    assert.equal(sidc?.slice(4, 10), 'CSSC--'); // Carrier FID
+    assert.equal(sidc?.slice(4, 10), 'CLCV--'); // Carrier FID
   });
 
   it('subsurface submarine → U battle dimension', () => {
