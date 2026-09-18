@@ -1,0 +1,32 @@
+{
+  "name": "mapsyblib",
+  "version": "1.0.0",
+  "description": "Bidirectional conversion between IEEE 1278 DIS entity type enumerations and MIL-STD-2525D SIDC codes",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    }
+  },
+  "main": "./src/index.js",
+  "files": [
+    "src/"
+  ],
+  "scripts": {
+    "test": "node --test test/index.test.js"
+  },
+  "keywords": [
+    "DIS",
+    "IEEE1278",
+    "MilStd2525",
+    "SIDC",
+    "milsymbol",
+    "simulation",
+    "military",
+    "SISO"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
