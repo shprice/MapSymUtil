@@ -66,6 +66,21 @@ export const SIDC_TREE = {
       38: { ss: '15', entity: '111100', bd: 'G', fid: 'EWMA--',  label: 'Missile Defense',        sisoName: 'Missile Defense Facility' },
       39: { ss: '15', entity: '200500', bd: 'G', fid: 'EVU---',  label: 'Command Post',           sisoName: 'Field Command Post' },
       40: { ss: '15', entity: '220100', bd: 'G', fid: 'ES----',  label: 'Observation Post',       sisoName: 'Observation Post' },
+      // Civilian vehicle categories (SISO-REF-010 v28 sec.5.2.3.1 codes 80-93)
+      80: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Motorcycle',             sisoName: 'Motorcycle' },
+      81: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Car',                    sisoName: 'Car' },
+      82: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Bus',                    sisoName: 'Bus' },
+      83: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Civ Cargo Truck',        sisoName: 'Single Unit Cargo Truck' },
+      84: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Civ Utility Truck',      sisoName: 'Single Unit Utility/Emergency Truck' },
+      85: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Civ Multi Cargo Truck',  sisoName: 'Multiple Unit Cargo Truck' },
+      86: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Civ Multi Util Truck',   sisoName: 'Multiple Unit Utility/Emergency Truck' },
+      87: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Construction Vehicle',   sisoName: 'Construction Specialty Vehicle' },
+      88: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Farm Vehicle',           sisoName: 'Farm Specialty Vehicle' },
+      89: { ss: '15', entity: '140600', bd: 'G', fid: 'EVUS--',  label: 'Trailer',                sisoName: 'Trailer' },
+      90: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Recreational Vehicle',   sisoName: 'Recreational' },
+      91: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Non-motorized Vehicle',  sisoName: 'Non-motorized' },
+      92: { ss: '15', entity: '150100', bd: 'G', fid: 'EVT---',  label: 'Train (Civilian)',        sisoName: 'Trains' },
+      93: { ss: '15', entity: '160100', bd: 'G', fid: 'EVC---',  label: 'Utility/Emergency Car',  sisoName: 'Utility/Emergency Car' },
     },
     2: { // Air — SISO Platform-Air Category (es.type.kind.1.domain.2.cat)
       // ss:'01' = Air; entity codes from milsymbol numbersidc/sidc/air.js (ss=01)
@@ -88,6 +103,20 @@ export const SIDC_TREE = {
       25: { ss: '01', entity: '110200', bd: 'A', fid: 'MH----',  label: 'Helicopter (SOF)',       sisoName: 'Special Operations Helicopter' },
       40: { ss: '01', entity: '110112', bd: 'A', fid: 'MFT---',  label: 'Trainer',                sisoName: 'Trainer' },
       50: { ss: '01', entity: '110300', bd: 'A', fid: 'MFQ---',  label: 'UAV',                    sisoName: 'Unmanned' },
+      // Civilian aircraft categories (SISO-REF-010 v28 sec.5.2.3.2 codes 80-101)
+      80: { ss: '01', entity: '110100', bd: 'A', fid: 'MF----',  label: 'Civ Ultralight (Flex)',  sisoName: 'Civilian Ultralight Aircraft, Non-rigid Wing' },
+      81: { ss: '01', entity: '110100', bd: 'A', fid: 'MF----',  label: 'Civ Ultralight (Rigid)', sisoName: 'Civilian Ultralight Aircraft, Rigid Wing' },
+      83: { ss: '01', entity: '110100', bd: 'A', fid: 'MF----',  label: 'Civ Glider',             sisoName: 'Civilian Fixed Wing Aircraft, Glider' },
+      84: { ss: '01', entity: '110100', bd: 'A', fid: 'MFC---',  label: 'Civ Fixed Wing (XS)',    sisoName: 'Civilian Fixed Wing Aircraft, Light Sport (up to 1320 lbs / 600 kg)' },
+      85: { ss: '01', entity: '110100', bd: 'A', fid: 'MFC---',  label: 'Civ Fixed Wing (S)',     sisoName: 'Civilian Fixed Wing Aircraft, Small (up to 12,500 lbs / 5,670 kg)' },
+      86: { ss: '01', entity: '110100', bd: 'A', fid: 'MFC---',  label: 'Civ Fixed Wing (M)',     sisoName: 'Civilian Fixed Wing Aircraft, Medium (up to 41,000 lbs / 18,597 kg)' },
+      87: { ss: '01', entity: '110100', bd: 'A', fid: 'MFC---',  label: 'Civ Fixed Wing (L)',     sisoName: 'Civilian Fixed Wing Aircraft, Large (up to 255,000 lbs / 115,666 kg)' },
+      88: { ss: '01', entity: '110100', bd: 'A', fid: 'MFC---',  label: 'Civ Fixed Wing (XL)',    sisoName: 'Civilian Fixed Wing Aircraft, Heavy (above 255,000 lbs / 115,666 kg)' },
+      90: { ss: '01', entity: '110200', bd: 'A', fid: 'MH----',  label: 'Civ Helicopter (S)',     sisoName: 'Civilian Helicopter, Small (up to 7,000 lbs / 3,175 kg)' },
+      91: { ss: '01', entity: '110200', bd: 'A', fid: 'MH----',  label: 'Civ Helicopter (M)',     sisoName: 'Civilian Helicopter, Medium (up to 20,000 lbs / 9,072 kg)' },
+      92: { ss: '01', entity: '110200', bd: 'A', fid: 'MH----',  label: 'Civ Helicopter (L)',     sisoName: 'Civilian Helicopter, Large (above 20,000 lbs / 9,072 kg)' },
+     100: { ss: '01', entity: '110100', bd: 'A', fid: 'MF----',  label: 'Balloon',                sisoName: 'Civilian Lighter than Air, Balloon' },
+     101: { ss: '01', entity: '110100', bd: 'A', fid: 'MF----',  label: 'Airship',                sisoName: 'Civilian Lighter than Air, Airship' },
     },
     3: { // Surface — SISO Platform-Surface Category (es.type.kind.1.domain.3.cat)
       // 2525D entity codes and 2525C fids per MIL-STD-2525D Annex B / milsymbol lettersidc/sea.js
