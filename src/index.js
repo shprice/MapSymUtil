@@ -36,3 +36,24 @@ export {
   sidcToDisTypeString,
   sidcToForceId,
 } from './sidc-to-dis.js';
+
+export {
+  CM_ENTITIES,
+  CM_CATEGORY_LABELS,
+  cmLabel,
+  isCmSidc,
+  parseCmSidc,
+  cmToSidc,
+  cmEntries,
+} from './control-measures.js';
+
+export {
+  SS_ENTITIES,
+  SS_CATEGORY_LABELS,
+  EXTENDED_SS_IDS,
+  ssLabel,
+  isExtendedSidc,
+  parseExtendedSidc,
+  ssToSidc,
+  ssEntries,
+} from './symbol-sets.js';

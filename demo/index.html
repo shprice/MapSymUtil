@@ -290,7 +290,7 @@
 
 <!-- ── Gallery ─────────────────────────────────────────────────────────── -->
 <div class="panel full" id="panel-gal">
-  <div class="section-title">Symbol Gallery — all categories for the selected domain</div>
+  <div class="section-title" id="gal-title">Symbol Gallery — all categories for the selected domain</div>
   <div class="gal-controls">
     <div class="field">
       <label class="field-label" for="gal-kind">Kind</label>
@@ -391,6 +391,9 @@ import {
   SIDC_TREE, treeLookup, DIS_ENTITY_KIND, DIS_DOMAIN, FORCE_ID_TO_SI, FORCE_ID_TO_SI_CHAR,
   disToSidc2525D, disToSidc2525C, disToSidcComponents,
   detectSidcFormat, parseSidc, sidcToDis, sidcToForceId,
+  CM_CATEGORY_LABELS, isCmSidc, parseCmSidc, cmToSidc, cmEntries,
+  SIDC_SYMBOL_SET, SS_CATEGORY_LABELS, EXTENDED_SS_IDS,
+  isExtendedSidc, parseExtendedSidc, ssToSidc, ssEntries,
 } from '/src/index.js';
 
 // ── Milsymbol helpers ─────────────────────────────────────────────────────
@@ -807,11 +810,24 @@ function updateSidcPanel(sidc) {
     addRow(fields, 'Kind',      `${result.kind} — ${result.kindName}`);
     addRow(fields, 'Domain',    `${result.domain} — ${result.domainName}`);
     addRow(fields, 'Category',  String(result.category));
+  } else if (isCmSidc(sidc)) {
+    const cm = parseCmSidc(sidc);
+    addRow(fields, 'Symbol Set', '25 — Control Measure', 'label');
+    addRow(fields, 'Label',      cm?.label ?? 'Control Measure', 'label');
+    addRow(fields, 'Entity',     cm?.entityCode ?? sidc.slice(10, 16));
+    addRow(fields, 'DIS', 'No DIS entity equivalent', 'null');
+  } else if (isExtendedSidc(sidc)) {
+    const ext = parseExtendedSidc(sidc);
+    const ssName = SIDC_SYMBOL_SET[ext?.symbolSet] ?? ext?.symbolSet;
+    addRow(fields, 'Symbol Set', `${ext?.symbolSet} — ${ssName}`, 'label');
+    addRow(fields, 'Label',      ext?.label ?? '—', 'label');
+    addRow(fields, 'Entity',     ext?.entityCode ?? sidc.slice(10, 16));
+    addRow(fields, 'DIS', 'No DIS entity equivalent', 'null');
   } else {
     addRow(fields, 'DIS', 'No mapping found', 'null');
   }
 
-  if (parsed) {
+  if (parsed && !isCmSidc(sidc) && !isExtendedSidc(sidc)) {
     if (fmt === '2525D') {
       addRow(fields, 'Sym Set', parsed.symbolSet);
       addRow(fields, 'Entity',  parsed.entity);
@@ -822,6 +838,22 @@ function updateSidcPanel(sidc) {
   }
 
   addForceRow(fields, forceId);
+
+  // If a non-DIS SIDC is entered, switch the gallery to the matching extended SS mode.
+  if (isCmSidc(sidc) && +galKindSel.value !== 25) {
+    galKindSel.value = 25;
+    refreshGalleryDomains(25);
+    buildGallery();
+  } else if (isExtendedSidc(sidc)) {
+    const ss = sidc.slice(4, 6);
+    const ssNum = Number(ss);
+    if (String(galKindSel.value) !== ss) {
+      galKindSel.value = ssNum;
+      refreshGalleryDomains(ssNum);
+      buildGallery();
+    }
+  }
+  if (fmt) updateGalleryActive(sidc);
 }
 
 sidcIn.addEventListener('input', () => updateSidcPanel(sidcIn.value.trim()));
@@ -841,25 +873,70 @@ function domainSymbols(kind, domain) {
   }).filter(Boolean);
 }
 
+const CM_GALLERY_CATS = [
+  { prefix: '',   label: 'All' },
+  { prefix: '13', label: CM_CATEGORY_LABELS['13'] },
+  { prefix: '16', label: CM_CATEGORY_LABELS['16'] },
+  { prefix: '18', label: CM_CATEGORY_LABELS['18'] },
+  { prefix: '20', label: CM_CATEGORY_LABELS['20'] },
+  { prefix: '21', label: CM_CATEGORY_LABELS['21'] },
+  { prefix: '24', label: CM_CATEGORY_LABELS['24'] },
+  { prefix: '25', label: CM_CATEGORY_LABELS['25'] },
+  { prefix: '27', label: CM_CATEGORY_LABELS['27'] },
+  { prefix: '28', label: CM_CATEGORY_LABELS['28'] },
+  { prefix: '32', label: CM_CATEGORY_LABELS['32'] },
+  { prefix: '34', label: CM_CATEGORY_LABELS['34'] },
+];
+
 function refreshGalleryDomains(kind) {
   const galDomain = document.getElementById('gal-domain');
-  const kindNode  = SIDC_TREE[kind];
-  const domains   = kindNode
-    ? Object.keys(kindNode).filter(k => k !== '_').map(Number).sort((a,b)=>a-b)
-    : [1];
-  const prev = +galDomain.value || 1;
+  const ss = String(kind).padStart(2, '0');
   galDomain.innerHTML = '';
-  for (const d of domains) {
-    const opt = document.createElement('option');
-    opt.value = d; opt.textContent = `${d} — ${DIS_DOMAIN[d] ?? 'Unknown'}`;
-    if (d === prev) opt.selected = true;
-    galDomain.appendChild(opt);
+  if (kind === 25) {
+    document.getElementById('gal-title').textContent =
+      'Symbol Gallery — Control Measures (MIL-STD-2525D Symbol Set 25)';
+    for (const { prefix, label } of CM_GALLERY_CATS) {
+      const opt = document.createElement('option');
+      opt.value = prefix;
+      opt.textContent = prefix ? `${prefix} — ${label}` : 'All';
+      galDomain.appendChild(opt);
+    }
+  } else if (EXTENDED_SS_IDS.has(ss)) {
+    const ssName = SIDC_SYMBOL_SET[ss] ?? ss;
+    document.getElementById('gal-title').textContent =
+      `Symbol Gallery — ${ssName} (MIL-STD-2525D Symbol Set ${ss})`;
+    const cats = SS_CATEGORY_LABELS[ss] ?? {};
+    // Add "All" option then one per category prefix
+    const allOpt = document.createElement('option');
+    allOpt.value = ''; allOpt.textContent = 'All';
+    galDomain.appendChild(allOpt);
+    for (const [prefix, label] of Object.entries(cats)) {
+      const opt = document.createElement('option');
+      opt.value = prefix;
+      opt.textContent = `${prefix} — ${label}`;
+      galDomain.appendChild(opt);
+    }
+  } else {
+    document.getElementById('gal-title').textContent =
+      'Symbol Gallery — all categories for the selected domain';
+    const kindNode = SIDC_TREE[kind];
+    const domains  = kindNode
+      ? Object.keys(kindNode).filter(k => k !== '_').map(Number).sort((a,b)=>a-b)
+      : [1];
+    const prev = +galDomain.value || 1;
+    for (const d of domains) {
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = `${d} — ${DIS_DOMAIN[d] ?? 'Unknown'}`;
+      if (d === prev) opt.selected = true;
+      galDomain.appendChild(opt);
+    }
   }
 }
 
 function buildGallery() {
   const kind    = +document.getElementById('gal-kind').value   || 1;
-  const domain  = +document.getElementById('gal-domain').value || 1;
+  const domainEl = document.getElementById('gal-domain');
+  const domain  = +domainEl.value || 1;
   const forceId = +document.getElementById('gal-force').value  || 0;
   const fmt     = document.getElementById('gal-fmt').value;
 
@@ -868,6 +945,93 @@ function buildGallery() {
   grid.innerHTML = '';
   let rendered   = 0;
 
+  const ss = String(kind).padStart(2, '0');
+
+  // ── Control Measure gallery ───────────────────────────────────────────────
+  if (kind === 25) {
+    const prefix = domainEl.value; // '' = All, '13' = C2 Points, etc.
+    const si     = FORCE_ID_TO_SI[forceId] ?? '01';
+    const entries = cmEntries(prefix || undefined);
+
+    for (const { entityCode, label } of entries) {
+      const sidc = cmToSidc(entityCode, si);
+      const card = document.createElement('div');
+      card.className = 'sym-card';
+      card.dataset.sidc   = sidc;
+      card.dataset.ss     = '25';
+      card.dataset.entity = entityCode;
+      card.dataset.cat    = entityCode;
+
+      const symDiv = document.createElement('div'); symDiv.className = 'sym-img';
+      const img = symImg(sidc, 38);
+      if (img) { symDiv.appendChild(img); rendered++; }
+      else {
+        const ph = document.createElement('div');
+        ph.className = 'no-sym';
+        ph.textContent = entityCode;
+        symDiv.appendChild(ph);
+      }
+
+      const lbl = document.createElement('div'); lbl.className = 'lbl';
+      lbl.textContent = label;
+      const sub = document.createElement('div'); sub.className = 'sub';
+      sub.textContent = entityCode;
+
+      card.appendChild(symDiv); card.appendChild(lbl); card.appendChild(sub);
+      card.addEventListener('click', () => {
+        sidcIn.value = sidc;
+        updateSidcPanel(sidc);
+      });
+      grid.appendChild(card);
+    }
+
+    summary.textContent = `${entries.length} control measures${rendered < entries.length ? ` (${rendered} rendered)` : ''}`;
+    return;
+  }
+
+  // ── Extended symbol set gallery (ss=11, 20, 27, 36, 40, 50–54, 60) ───────
+  if (EXTENDED_SS_IDS.has(ss)) {
+    const prefix  = domainEl.value; // '' = All, '11' = category, etc.
+    const si      = FORCE_ID_TO_SI[forceId] ?? '01';
+    const entries = ssEntries(ss, prefix || undefined);
+
+    for (const { entityCode, label } of entries) {
+      const sidc = ssToSidc(ss, entityCode, si);
+      const card = document.createElement('div');
+      card.className = 'sym-card';
+      card.dataset.sidc   = sidc;
+      card.dataset.ss     = ss;
+      card.dataset.entity = entityCode;
+
+      const symDiv = document.createElement('div'); symDiv.className = 'sym-img';
+      const img = symImg(sidc, 38);
+      if (img) { symDiv.appendChild(img); rendered++; }
+      else {
+        const ph = document.createElement('div');
+        ph.className = 'no-sym';
+        ph.textContent = entityCode;
+        symDiv.appendChild(ph);
+      }
+
+      const lbl = document.createElement('div'); lbl.className = 'lbl';
+      lbl.textContent = label;
+      const sub = document.createElement('div'); sub.className = 'sub';
+      sub.textContent = entityCode;
+
+      card.appendChild(symDiv); card.appendChild(lbl); card.appendChild(sub);
+      card.addEventListener('click', () => {
+        sidcIn.value = sidc;
+        updateSidcPanel(sidc);
+      });
+      grid.appendChild(card);
+    }
+
+    const ssName = SIDC_SYMBOL_SET[ss] ?? ss;
+    summary.textContent = `${entries.length} ${ssName} entities${rendered < entries.length ? ` (${rendered} rendered)` : ''}`;
+    return;
+  }
+
+  // ── DIS entity gallery ────────────────────────────────────────────────────
   const si     = fmt === '2525C' ? FORCE_ID_TO_SI_CHAR[forceId] ?? 'U' : FORCE_ID_TO_SI[forceId] ?? '01';
   const toSidc = sym => fmt === '2525C'
     ? `S${si}${sym.bd}P${sym.fid}-----`
@@ -943,6 +1107,26 @@ treeKinds.forEach(k => {
   if (k === 1) opt.selected = true;
   galKindSel.appendChild(opt);
 });
+// Add extended (non-DIS) symbol sets as browsable gallery entries
+const EXTENDED_GAL_ENTRIES = [
+  { value: 25,  label: 'Control Measures (ss=25)' },
+  { value: 11,  label: 'Land Civilian Unit (ss=11)' },
+  { value: 20,  label: 'Land Installation (ss=20)' },
+  { value: 27,  label: 'Dismounted Individual (ss=27)' },
+  { value: 36,  label: 'Mine Warfare (ss=36)' },
+  { value: 40,  label: 'Activities (ss=40)' },
+  { value: 50,  label: 'SIGINT (ss=50)' },
+  { value: 51,  label: 'SIGINT Air (ss=51)' },
+  { value: 52,  label: 'SIGINT Land Equipment (ss=52)' },
+  { value: 53,  label: 'SIGINT Space (ss=53)' },
+  { value: 54,  label: 'SIGINT Sea Surface (ss=54)' },
+  { value: 60,  label: 'Cyberspace (ss=60)' },
+];
+for (const { value, label } of EXTENDED_GAL_ENTRIES) {
+  const opt = document.createElement('option');
+  opt.value = value; opt.textContent = `${value} — ${label}`;
+  galKindSel.appendChild(opt);
+}
 refreshGalleryDomains(1);
 
 galKindSel.addEventListener('change', () => {
@@ -953,8 +1137,11 @@ galDomainSel.addEventListener('change', buildGallery);
 document.getElementById('gal-force').addEventListener('change', buildGallery);
 document.getElementById('gal-fmt').addEventListener('change',   buildGallery);
 
-// Sync gallery domain selectors when DIS panel kind/domain changes
+// Sync gallery domain selectors when DIS panel kind/domain changes.
+// Skip sync if the gallery is showing a non-DIS extended symbol set.
 function syncGallerySelectors() {
+  const galSS = String(galKindSel.value).padStart(2, '0');
+  if (+galKindSel.value === 25 || EXTENDED_SS_IDS.has(galSS)) return;
   const k = +kindSel.value, d = +domainSel.value;
   if (+galKindSel.value !== k) {
     galKindSel.value = k;

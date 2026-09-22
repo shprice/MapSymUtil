@@ -53,13 +53,17 @@ export const SIDC_SYMBOL_SET = Object.freeze({
   '15': 'LandEquipment',
   '20': 'LandInstallation',
   '25': 'ControlMeasure',
-  '27': 'Atmospheric',
-  '28': 'Oceanographic',
-  '29': 'MeteorologicalSpace',
+  '27': 'DismountedIndividual',
   '30': 'SeaSurface',
   '35': 'SeaSubsurface',
-  '36': 'SeaSubsurfaceMissile',
-  '40': 'MineWarfare',
+  '36': 'MineWarfare',
+  '40': 'Activities',
+  '50': 'SIGINT',
+  '51': 'SIGINTAir',
+  '52': 'SIGINTLandEquipment',
+  '53': 'SIGINTSpace',
+  '54': 'SIGINTSeaSurface',
+  '60': 'Cyberspace',
 });
 
 // DIS Force ID → 2525D Standard Identity (2-char string)
